@@ -1,0 +1,839 @@
+** mtcp/config/route.conf      2025-02-05 17:03:06.375318369 +0000
+--- mtcp_fixed/config/route.conf        2025-02-05 16:48:59.617502029 +0000
+***************
+*** 0 ****
+--- 1,21 ----
++ # This file is routing table example of our testbed machine
++ # Copy this file to route.conf and give appropriate routes
++ # Please save this file as config/route.conf. Put the config/
++ # directory in the same directory where the binary lies.
++ #
++ # (Destination address)/(Prefix) (Device name)
++ #
++ #
++ # Add entry for default gateway route as:
++ # w.x.y.z/0 dpdk0
++ # Always put the default gateway route as the last entry.
++ # Make sure that the mask (Prefix) is set to 0. For example,
++ # if the default gateway IP address is 10.0.0.10, then the
++ # entry will be:
++ # 10.0.0.10/0 dpdk0
++ #
++ 
++ ROUTES 2
++ #10.0.0.1/24 dpdk0
++ 192.168.56.80/24 dpdk0
++ 10.0.1.1/24 dpdk1
+*** mtcp/apps/example/echoserver.c      2025-02-05 17:02:43.863270509 +0000
+--- mtcp_fixed/apps/example/echoserver.c        2025-02-05 16:58:09.414686907 +0000
+***************
+*** 0 ****
+--- 1,188 ----
++ #include <stdio.h> 
++ #include <stdlib.h>
++ #include <string.h> 
++ #include <errno.h> 
++ #include <mtcp_api.h> 
++ #include <mtcp_epoll.h> 
++ #include <signal.h>
++ #include <arpa/inet.h>
++ 
++ #define MAX_EVENTS 1024
++ #define MAX_BUFFER_SIZE 1024
++ #define PORT 7
++ #define CONCURRENCY 1
++ 
++ 
++ #define DEBUG(fmt, args...)   fprintf(stderr, "[DEBUG] " fmt "\n", ## args)
++ #define ERROR(fmt, args...)   fprintf(stderr, fmt "\n", ## args)
++ #define SAMPLE(fmt, args...)  fprintf(stdout, fmt "\n", ## args)
++ 
++ /*----------------------------------------------------------------------------*/
++ struct thread_context
++ {
++       int core;
++       mctx_t mctx;
++ };
++ /*----------------------------------------------------------------------------*/
++ void
++ SignalHandler(int signum)
++ {
++       ERROR("Received SIGINT");
++       exit(-1);
++ }
++ /*----------------------------------------------------------------------------*/
++ 
++ void usage(const char *prog) {
++     fprintf(stderr, "Usage: %s <config_file>\n", prog);
++     exit(EXIT_FAILURE);
++ }
++ 
++ int main(int argc, char **argv) {
++     if (argc != 2) {
++         usage(argv[0]);
++     }
++ 
++     //mtcp
++     mctx_t mctx;
++     struct mtcp_conf mcfg;
++     struct thread_context *ctx;
++     int core = 0;
++ 
++     // This must be done before mtcp_init
++     mtcp_getconf(&mcfg);
++     mcfg.num_cores = 1;
++     mtcp_setconf(&mcfg);
++ 
++     const char *config_file = argv[1];
++     int ret = mtcp_init(config_file);
++     if (ret < 0) {
++         fprintf(stderr, "Failed to initialize mTCP: %s\n", strerror(errno));
++         exit(EXIT_FAILURE);
++     }
++ 
++     // Default simple config, this must be done after mtcp_init
++     mtcp_getconf(&mcfg);
++     mcfg.max_concurrency = 3 * CONCURRENCY;
++     mcfg.max_num_buffers = 3 * CONCURRENCY;
++     mtcp_setconf(&mcfg);
++    
++     // Catch ctrl+c to clean up
++     mtcp_register_signal(SIGINT, SignalHandler);
++    
++     DEBUG("Creating thread context...");
++     mtcp_core_affinitize(core);
++     ctx = (struct thread_context *) calloc(1, sizeof(struct thread_context));
++     if (!ctx) {
++         ERROR("Failed to create context.");
++         perror("calloc");
++         return -1;
++     }
++     ctx->core = core;
++     ctx->mctx = mtcp_create_context(core);
++     if (!ctx->mctx) {
++         ERROR("Failed to create mtcp context.");
++         return -1;
++     }
++     mctx = ctx->mctx;
++ 
++ 
++     int listener, ep;
++     ep = mtcp_epoll_create(mctx, MAX_EVENTS); // Create epoll instance
++     if (ep < 0) {
++         fprintf(stderr, "Failed to create epoll instance: %s\n", strerror(errno));
++         exit(EXIT_FAILURE);
++     }
++ 
++     listener = mtcp_socket(mctx, AF_INET, SOCK_STREAM, 0); // Create a socket
++     if (listener < 0) {
++         fprintf(stderr, "Failed to create socket: %s\n", strerror(errno));
++         exit(EXIT_FAILURE);
++     }
++ 
++     int reuse = 1;
++     mtcp_setsockopt(mctx, listener, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse));
++ 
++     struct sockaddr_in saddr;
++     memset(&saddr, 0, sizeof(saddr));
++     saddr.sin_family = AF_INET;
++     saddr.sin_addr.s_addr = INADDR_ANY; // Bind to any available interface
++     //saddr.sin_addr.s_addr = inet_addr("192.168.57.63");
++     saddr.sin_port = htons(PORT);
++ 
++     ret = mtcp_bind(mctx, listener, (struct sockaddr *)&saddr, sizeof(saddr));
++     if (ret < 0) {
++         fprintf(stderr, "Failed to bind socket: %s\n", strerror(errno));
++         exit(EXIT_FAILURE);
++     }
++ 
++     int backlog = 3;
++     //ret = mtcp_listen(mctx, listener, 1024); // Start listening
++     ret = mtcp_listen(mctx, listener, backlog); // Start listening
++     if (ret < 0) {
++         fprintf(stderr, "Failed to listen on socket: %s\n", strerror(errno));
++         exit(EXIT_FAILURE);
++     }
++ 
++     struct mtcp_epoll_event ev, events[MAX_EVENTS];
++     ev.events = MTCP_EPOLLIN; // Listen for incoming connections
++     ev.data.sockid = listener;
++     mtcp_epoll_ctl(mctx, ep, MTCP_EPOLL_CTL_ADD, listener, &ev);
++ 
++     printf("Echo server is listening on port %d...\n", PORT);
++ 
++     char buffer[MAX_BUFFER_SIZE];
++     while (1) {
++         int nevents = mtcp_epoll_wait(mctx, ep, events, MAX_EVENTS, -1);
++         if (nevents < 0) {
++             if (errno != EINTR) {
++                 fprintf(stderr, "epoll_wait failed: %s\n", strerror(errno));
++             }
++             continue;
++         }
++ 
++         for (int i = 0; i < nevents; i++) {
++             if (events[i].data.sockid == listener) {
++                 printf("New connexion");
++                 // Accept new connection
++                 int cfd = mtcp_accept(mctx, listener, NULL, NULL);
++                 if (cfd < 0) {
++                     fprintf(stderr, "Failed to accept connection: %s\n", strerror(errno));
++                     continue;
++                 }
++ 
++                 // Add new connection to epoll
++                 printf("Add new connexion to epoll");
++                 struct mtcp_epoll_event conn_ev;
++                 conn_ev.events = MTCP_EPOLLIN;
++                 conn_ev.data.sockid = cfd;
++                 mtcp_epoll_ctl(mctx, ep, MTCP_EPOLL_CTL_ADD, cfd, &conn_ev);
++ 
++                 printf("New connection accepted (fd: %d).\n", cfd);
++             } else {
++                 // Handle existing connection
++                 printf("Handle existing connexion");
++                 int sockid = events[i].data.sockid;
++                 if (events[i].events & MTCP_EPOLLIN) {
++                     int ret = mtcp_read(mctx, sockid, buffer, MAX_BUFFER_SIZE);
++                     if (ret <= 0) {
++                         if (ret == 0 || errno == ECONNRESET) {
++                             printf("Connection closed (fd: %d).\n", sockid);
++                             mtcp_epoll_ctl(mctx, ep, MTCP_EPOLL_CTL_DEL, sockid, NULL);
++                             mtcp_close(mctx, sockid);
++                         } else {
++                             fprintf(stderr, "Failed to read from socket: %s\n", strerror(errno));
++                         }
++                     } else {
++                         // Echo data back to client
++                         mtcp_write(mctx, sockid, buffer, ret);
++                     }
++                 }
++             }
++         }
++     }
++ 
++     mtcp_destroy_context(mctx);
++     mtcp_destroy();
++     return 0;
++ }
++ 
+*** mtcp/apps/example/echoserver.conf   2025-02-05 17:02:46.863276878 +0000
+--- mtcp_fixed/apps/example/echoserver.conf     2025-01-23 17:10:18.490623074 +0000
+***************
+*** 0 ****
+--- 1,85 ----
++ ############### mtcp configuration file ###############
++ 
++ # The underlying I/O module you want to use. Please
++ # enable only one out of the four.
++ #io = psio
++ #io = onvm
++ #io = netmap
++ io = dpdk
++ 
++ # No. of cores setting (enabling this option will override
++ # the `cpu' config for those applications that accept
++ # num_cores as command line arguments)
++ # 
++ # e.g. in case ./epwget is executed with `-N 4', the
++ # mtcp core will still invoke 8 mTCP threads if the
++ # following line is uncommented.
++ #num_cores = 8
++ 
++ # Number of memory channels per processor socket (dpdk-only)
++ num_mem_ch = 4
++ 
++ #--- ONVM specific args ---#
++ # Service id (required)
++ #onvm_serv = 2
++ # Dest id (used to forward traffic to specific NF)
++ #onvm_dest = 1
++ 
++ # Sample ONVM configurations
++ # Single node epserver <-> epwget 
++ #onvm_serv = 2
++ #onvm_dest = 1
++ 
++ # Simple client for multi node setup
++ #onvm_serv = 1
++ #--------------------------#
++ 
++ # Used port (please adjust accordingly)
++ #------ PSIO ports -------#
++ #port = xge0 xge1
++ #port = xge1
++ #------ DPDK ports -------#
++ port = dpdk0
++ #port = dpdk1
++ #port = dpdk0 dpdk1
++ 
++ # Enable multi-process support
++ #multiprocess = 1
++ 
++ # Congestion control algorithm
++ # (only available when configured with --enable-ccp)
++ # cc = reno
++ # cc = cubic
++ 
++ # Receive buffer size of sockets; if not set: rcvbuf = sndbuf
++ rcvbuf = 8192
++ 
++ # Send buffer size of sockets; if not set: sndbuf = rcvbuf
++ sndbuf = 8192
++ 
++ # if sndbuf & rcvbuf not set: sndbuf = rcvbuf = 8192
++ 
++ # Maximum concurrency per core (default = 10000)
++ #max_concurrency = 10000
++ 
++ # Maximum number of socket buffers per core (default = 10000)
++ # Set this to small value if there are many idle connections
++ #max_num_buffers = 10000
++ 
++ # TCO timeout seconds
++ # (tcp_timeout = -1 can disable the timeout check)
++ tcp_timeout = 30
++ 
++ # TCP timewait seconds
++ tcp_timewait = 0
++ 
++ # Interface to print stats (please adjust accordingly)
++ # You can enable multiple ports in a line
++ #------ PSIO ports -------#
++ #stat_print = xge0
++ #stat_print = xge1
++ #------ DPDK ports -------#
++ stat_print = dpdk0
++ #stat_print = dpdk0 dpdk1
++ 
++ #######################################################
+--- mtcp/apps/example/Makefile.in	2025-02-25 15:42:44.545267915 +0000
++++ mtcp_fixed/apps/example/Makefile	2025-02-25 15:35:46.419793516 +0000
+@@ -1,13 +1,13 @@
+ # TODO: Make this Makefile.in pretty
+ 
+-TARGETS = epserver epwget
+-CC=@CC@ -g -O3 -Wall -Werror -fgnu89-inline
+-DPDK=@DPDK@
+-PS=@PSIO@
+-NETMAP=@NETMAP@
+-ONVM=@ONVM@
+-CCP=@CCP@
+-CFLAGS=@CFLAGS@
++TARGETS = epserver epwget echoserver
++CC=gcc -g -O3 -Wall -Werror -fgnu89-inline
++DPDK=1
++PS=0
++NETMAP=0
++ONVM=0
++CCP=
++CFLAGS=-g -O2
+ 
+ # Add arch-specific optimization
+ ifeq ($(shell uname -m),x86_64)
+@@ -54,11 +54,11 @@
+ $(error "Please define RTE_TARGET environment variable")
+ endif
+ 
+-INC += -I@ONVMLIBPATH@/onvm_nflib
+-INC += -I@ONVMLIBPATH@/lib
++INC += -I/onvm_nflib
++INC += -I/lib
+ INC += -DENABLE_ONVM
+-LIBS += @ONVMLIBPATH@/onvm_nflib/$(RTE_TARGET)/libonvm.a
+-LIBS += @ONVMLIBPATH@/lib/$(RTE_TARGET)/lib/libonvmhelper.a -lm
++LIBS += /onvm_nflib/$(RTE_TARGET)/libonvm.a
++LIBS += /lib/$(RTE_TARGET)/lib/libonvmhelper.a -lm
+ endif
+ 
+ ifeq ($V,) # no echo
+@@ -76,7 +76,7 @@
+ INC += -I$(LIBCCP)
+ endif
+ 
+-all: epserver epwget
++all: epserver epwget echoserver
+ 
+ epserver.o: epserver.c
+ 	$(MSG) "   CC $<"
+@@ -94,6 +94,14 @@
+ 	$(MSG) "   LD $<"
+ 	$(HIDE) ${CC} $< ${LIBS} ${UTIL_OBJ} -o $@
+ 
++echoserver.o: echoserver.c
++	$(MSG) "   CC $<"
++	$(HIDE) ${CC} -c $< ${CFLAGS} ${INC}
++
++echoserver: echoserver.o ${MTCP_FLD}/lib/libmtcp.a
++	$(MSG) "   LD $<"
++	$(HIDE) ${CC} $< ${LIBS} ${UTIL_OBJ} -o $@
++
+ clean:
+ 	$(MSG) "   CLEAN $(TARGETS)"
+ 	$(HIDE) rm -f *~ *.o ${TARGETS} log_*
+*** mtcp_ref/dpdk/usertools/dpdk-setup-not-interactive.sh	1970-01-01 00:00:00.000000000 +0000
+--- mtcp_mod/dpdk/usertools/dpdk-setup-not-interactive.sh	2025-02-28 16:26:38.457147542 +0000
+***************
+*** 0 ****
+--- 1,461 ----
++ #! /bin/bash
++ # SPDX-License-Identifier: BSD-3-Clause
++ # Copyright(c) 2010-2014 Intel Corporation
++ 
++ #
++ # Run with "source /path/to/dpdk-setup.sh"
++ #
++ 
++ #
++ # Change to DPDK directory ( <this-script's-dir>/.. ), and export it as RTE_SDK
++ #
++ cd $(dirname ${BASH_SOURCE[0]})/..
++ export RTE_SDK=$PWD
++ echo "------------------------------------------------------------------------------"
++ echo " RTE_SDK exported as $RTE_SDK"
++ echo "------------------------------------------------------------------------------"
++ 
++ HUGEPGSZ=`cat /proc/meminfo  | grep Hugepagesize | cut -d : -f 2 | tr -d ' '`
++ 
++ #
++ # Application EAL parameters for setting memory options (amount/channels/ranks).
++ #
++ EAL_PARAMS='-n 4'
++ 
++ #
++ # Sets QUIT variable so script will finish.
++ #
++ quit()
++ {
++ 	QUIT=$1
++ }
++ 
++ # Shortcut for quit.
++ q()
++ {
++ 	quit
++ }
++ 
++ #
++ # Sets up environmental variables for ICC.
++ #
++ setup_icc()
++ {
++ 	DEFAULT_PATH=/opt/intel/bin/iccvars.sh
++ 	param=$1
++ 	echo "param $param"
++ 	shpath=`which iccvars.sh 2> /dev/null`
++ 	if [ $? -eq 0 ] ; then
++ 		echo "Loading iccvars.sh from $shpath for $param"
++ 		source $shpath $param
++ 	elif [ -f $DEFAULT_PATH ] ; then
++ 		echo "Loading iccvars.sh from $DEFAULT_PATH for $param"
++ 		source $DEFAULT_PATH $param
++ 	else
++ 		echo "## ERROR: cannot find 'iccvars.sh' script to set up ICC."
++ 		echo "##     To fix, please add the directory that contains"
++ 		echo "##     iccvars.sh  to your 'PATH' environment variable."
++ 		quit
++ 	fi
++ }
++ 
++ #
++ # Sets RTE_TARGET and does a "make install".
++ #
++ setup_target()
++ {
++ 	export RTE_TARGET=$1
++ 	echo " RTE_TARGET $RTE_TARGET"
++ 	compiler=${RTE_TARGET##*-}
++ 	echo " compiler $compiler"
++ 	if [ "$compiler" == "icc" ] ; then
++ 		platform=${RTE_TARGET%%-*}
++ 		if [ "$platform" == "x86_64" ] ; then
++ 			which setup_icc
++ 			setup_icc intel64
++ 		else
++ 			setup_icc ia32
++ 		fi
++ 	fi
++ 	if [ "$QUIT" == "0" ] ; then
++ 		make install T=${RTE_TARGET}
++ 	fi
++ 	echo "------------------------------------------------------------------------------"
++ 	echo " RTE_TARGET exported as $RTE_TARGET"
++ 	echo "------------------------------------------------------------------------------"
++ }
++ 
++ #
++ # Creates hugepage filesystem.
++ #
++ create_mnt_huge()
++ {
++ 	echo "Creating /mnt/huge and mounting as hugetlbfs"
++ 	sudo mkdir -p /mnt/huge
++ 
++ 	grep -s '/mnt/huge' /proc/mounts > /dev/null
++ 	if [ $? -ne 0 ] ; then
++ 		sudo mount -t hugetlbfs nodev /mnt/huge
++ 	fi
++ }
++ 
++ #
++ # Removes hugepage filesystem.
++ #
++ remove_mnt_huge()
++ {
++ 	echo "Unmounting /mnt/huge and removing directory"
++ 	grep -s '/mnt/huge' /proc/mounts > /dev/null
++ 	if [ $? -eq 0 ] ; then
++ 		sudo umount /mnt/huge
++ 	fi
++ 
++ 	if [ -d /mnt/huge ] ; then
++ 		sudo rm -R /mnt/huge
++ 	fi
++ }
++ 
++ #
++ # Unloads igb_uio.ko.
++ #
++ remove_igb_uio_module()
++ {
++ 	echo "Unloading any existing DPDK UIO module"
++ 	/sbin/lsmod | grep -s igb_uio > /dev/null
++ 	if [ $? -eq 0 ] ; then
++ 		sudo /sbin/rmmod igb_uio
++ 	fi
++ }
++ 
++ #
++ # Loads new igb_uio.ko (and uio module if needed).
++ #
++ load_igb_uio_module()
++ {
++ 	if [ ! -f $RTE_SDK/$RTE_TARGET/kmod/igb_uio.ko ];then
++ 		echo "## ERROR: Target does not have the DPDK UIO Kernel Module."
++ 		echo "       To fix, please try to rebuild target."
++ 		return
++ 	fi
++ 
++ 	remove_igb_uio_module
++ 
++ 	/sbin/lsmod | grep -s uio > /dev/null
++ 	if [ $? -ne 0 ] ; then
++ 		modinfo uio > /dev/null
++ 		if [ $? -eq 0 ]; then
++ 			echo "Loading uio module"
++ 			sudo /sbin/modprobe uio
++ 		fi
++ 	fi
++ 
++ 	# UIO may be compiled into kernel, so it may not be an error if it can't
++ 	# be loaded.
++ 
++ 	echo "Loading DPDK UIO module"
++ 	sudo /sbin/insmod $RTE_SDK/$RTE_TARGET/kmod/igb_uio.ko
++ 	if [ $? -ne 0 ] ; then
++ 		echo "## ERROR: Could not load kmod/igb_uio.ko."
++ 		quit
++ 	fi
++ }
++ 
++ #
++ # Unloads VFIO modules.
++ #
++ remove_vfio_module()
++ {
++ 	echo "Unloading any existing VFIO module"
++ 	/sbin/lsmod | grep -s vfio > /dev/null
++ 	if [ $? -eq 0 ] ; then
++ 		sudo /sbin/rmmod vfio-pci
++ 		sudo /sbin/rmmod vfio_iommu_type1
++ 		sudo /sbin/rmmod vfio
++ 	fi
++ }
++ 
++ #
++ # Loads new vfio-pci (and vfio module if needed).
++ #
++ load_vfio_module()
++ {
++ 	remove_vfio_module
++ 
++ 	VFIO_PATH="kernel/drivers/vfio/pci/vfio-pci.ko"
++ 
++ 	echo "Loading VFIO module"
++ 	/sbin/lsmod | grep -s vfio_pci > /dev/null
++ 	if [ $? -ne 0 ] ; then
++ 		if [ -f /lib/modules/$(uname -r)/$VFIO_PATH ] ; then
++ 			sudo /sbin/modprobe vfio-pci
++ 		fi
++ 	fi
++ 
++ 	# make sure regular users can read /dev/vfio
++ 	echo "chmod /dev/vfio"
++ 	sudo chmod a+x /dev/vfio
++ 	if [ $? -ne 0 ] ; then
++ 		echo "FAIL"
++ 		quit
++ 	fi
++ 	echo "OK"
++ 
++ 	# check if /dev/vfio/vfio exists - that way we
++ 	# know we either loaded the module, or it was
++ 	# compiled into the kernel
++ 	if [ ! -e /dev/vfio/vfio ] ; then
++ 		echo "## ERROR: VFIO not found!"
++ 	fi
++ }
++ 
++ #
++ # Unloads the rte_kni.ko module.
++ #
++ remove_kni_module()
++ {
++ 	echo "Unloading any existing DPDK KNI module"
++ 	/sbin/lsmod | grep -s rte_kni > /dev/null
++ 	if [ $? -eq 0 ] ; then
++ 		sudo /sbin/rmmod rte_kni
++ 	fi
++ }
++ 
++ #
++ # Loads the rte_kni.ko module.
++ #
++ load_kni_module()
++ {
++     # Check that the KNI module is already built.
++ 	if [ ! -f $RTE_SDK/$RTE_TARGET/kmod/rte_kni.ko ];then
++ 		echo "## ERROR: Target does not have the DPDK KNI Module."
++ 		echo "       To fix, please try to rebuild target."
++ 		return
++ 	fi
++ 
++     # Unload existing version if present.
++ 	remove_kni_module
++ 
++     # Now try load the KNI module.
++ 	echo "Loading DPDK KNI module"
++ 	sudo /sbin/insmod $RTE_SDK/$RTE_TARGET/kmod/rte_kni.ko
++ 	if [ $? -ne 0 ] ; then
++ 		echo "## ERROR: Could not load kmod/rte_kni.ko."
++ 		quit
++ 	fi
++ }
++ 
++ #
++ # Sets appropriate permissions on /dev/vfio/* files
++ #
++ set_vfio_permissions()
++ {
++ 	# make sure regular users can read /dev/vfio
++ 	echo "chmod /dev/vfio"
++ 	sudo chmod a+x /dev/vfio
++ 	if [ $? -ne 0 ] ; then
++ 		echo "FAIL"
++ 		quit
++ 	fi
++ 	echo "OK"
++ 
++ 	# make sure regular user can access everything inside /dev/vfio
++ 	echo "chmod /dev/vfio/*"
++ 	sudo chmod 0666 /dev/vfio/*
++ 	if [ $? -ne 0 ] ; then
++ 		echo "FAIL"
++ 		quit
++ 	fi
++ 	echo "OK"
++ 
++ 	# since permissions are only to be set when running as
++ 	# regular user, we only check ulimit here
++ 	#
++ 	# warn if regular user is only allowed
++ 	# to memlock <64M of memory
++ 	MEMLOCK_AMNT=`ulimit -l`
++ 
++ 	if [ "$MEMLOCK_AMNT" != "unlimited" ] ; then
++ 		MEMLOCK_MB=`expr $MEMLOCK_AMNT / 1024`
++ 		echo ""
++ 		echo "Current user memlock limit: ${MEMLOCK_MB} MB"
++ 		echo ""
++ 		echo "This is the maximum amount of memory you will be"
++ 		echo "able to use with DPDK and VFIO if run as current user."
++ 		echo -n "To change this, please adjust limits.conf memlock "
++ 		echo "limit for current user."
++ 
++ 		if [ $MEMLOCK_AMNT -lt 65536 ] ; then
++ 			echo ""
++ 			echo "## WARNING: memlock limit is less than 64MB"
++ 			echo -n "## DPDK with VFIO may not be able to initialize "
++ 			echo "if run as current user."
++ 		fi
++ 	fi
++ }
++ 
++ #
++ # Removes all reserved hugepages.
++ #
++ clear_huge_pages()
++ {
++ 	echo > .echo_tmp
++ 	for d in /sys/devices/system/node/node? ; do
++ 		echo "echo 0 > $d/hugepages/hugepages-${HUGEPGSZ}/nr_hugepages" >> .echo_tmp
++ 	done
++ 	echo "Removing currently reserved hugepages"
++ 	sudo sh .echo_tmp
++ 	rm -f .echo_tmp
++ 
++ 	remove_mnt_huge
++ }
++ 
++ #
++ # Creates hugepages.
++ #
++ set_non_numa_pages()
++ {
++ 	clear_huge_pages
++ 
++ 	echo ""
++ 	echo "  Input the number of ${HUGEPGSZ} hugepages"
++ 	echo "  Example: to have 128MB of hugepages available in a 2MB huge page system,"
++ 	echo "  enter '64' to reserve 64 * 2MB pages"
++ 	echo -n "Number of pages: "
++ 	Pages=$1
++ 
++ 	echo "echo $Pages > /sys/kernel/mm/hugepages/hugepages-${HUGEPGSZ}/nr_hugepages" > .echo_tmp
++ 
++ 	echo "Reserving hugepages"
++ 	sudo sh .echo_tmp
++ 	rm -f .echo_tmp
++ 
++ 	create_mnt_huge
++ }
++ 
++ #
++ # Creates hugepages on specific NUMA nodes.
++ #
++ set_numa_pages()
++ {
++ 	Pages=$1
++ 	clear_huge_pages
++ 	
++ 	echo ""
++ 	echo "  Input the number of ${HUGEPGSZ} hugepages for each node"
++ 	echo "  Example: to have 128MB of hugepages available per node in a 2MB huge page system,"
++ 	echo "  enter '64' to reserve 64 * 2MB pages on each node"
++ 
++ 	echo > .echo_tmp
++ 	for d in /sys/devices/system/node/node? ; do
++ 		node=$(basename $d)
++ 		echo -n "Number of pages for $node: "
++ 		echo "echo $Pages > $d/hugepages/hugepages-${HUGEPGSZ}/nr_hugepages" >> .echo_tmp
++ 	done
++ 	echo "Reserving hugepages"
++ 	sudo sh .echo_tmp
++ 	rm -f .echo_tmp
++ 
++ 	create_mnt_huge
++ }
++ 
++ #
++ # Run unit test application.
++ #
++ run_test_app()
++ {
++ 	Bitmask=$1
++ 	echo ""
++ 	echo "  Enter hex bitmask of cores to execute test app on"
++ 	echo "  Example: to execute app on cores 0 to 7, enter 0xff"
++ 	echo -n "bitmask: "
++ 	echo "Launching app"
++ 	sudo ${RTE_TARGET}/app/test -c $Bitmask $EAL_PARAMS
++ }
++ 
++ #
++ # Run unit testpmd application.
++ #
++ run_testpmd_app()
++ {
++ 	Bitmask=$1
++ 	echo ""
++ 	echo "  Enter hex bitmask of cores to execute testpmd app on"
++ 	echo "  Example: to execute app on cores 0 to 7, enter 0xff"
++ 	echo -n "bitmask: "
++ 	echo "Launching app"
++ 	sudo ${RTE_TARGET}/app/testpmd -c $Bitmask $EAL_PARAMS -- -i
++ }
++ 
++ #
++ # Print hugepage information.
++ #
++ grep_meminfo()
++ {
++ 	grep -i huge /proc/meminfo
++ }
++ 
++ #
++ # Calls dpdk-devbind.py --status to show the devices and what they
++ # are all bound to, in terms of drivers.
++ #
++ show_devices()
++ {
++ 	if [ -d /sys/module/vfio_pci -o -d /sys/module/igb_uio ]; then
++ 		${RTE_SDK}/usertools/dpdk-devbind.py --status
++ 	else
++ 		echo "# Please load the 'igb_uio' or 'vfio-pci' kernel module before "
++ 		echo "# querying or adjusting device bindings"
++ 	fi
++ }
++ 
++ #
++ # Uses dpdk-devbind.py to move devices to work with vfio-pci
++ #
++ bind_devices_to_vfio()
++ {
++ 	PCI_PATH=$1
++ 	if [ -d /sys/module/vfio_pci ]; then
++ 		${RTE_SDK}/usertools/dpdk-devbind.py --status
++ 		echo ""
++ 		echo -n "Enter PCI address of device to bind to VFIO driver: "
++ 		sudo ${RTE_SDK}/usertools/dpdk-devbind.py -b vfio-pci $PCI_PATH &&
++ 			echo "OK"
++ 	else
++ 		echo "# Please load the 'vfio-pci' kernel module before querying or "
++ 		echo "# adjusting device bindings"
++ 	fi
++ }
++ 
++ #
++ # Uses dpdk-devbind.py to move devices to work with igb_uio
++ #
++ bind_devices_to_igb_uio()
++ {
++ 	PCI_PATH=$1
++ 	if [ -d /sys/module/igb_uio ]; then
++ 		${RTE_SDK}/usertools/dpdk-devbind.py --status
++ 		echo ""
++ 		echo -n "Enter PCI address of device to bind to IGB UIO driver: "
++ 		sudo ${RTE_SDK}/usertools/dpdk-devbind.py -b igb_uio $PCI_PATH && echo "OK"
++ 	else
++ 		echo "# Please load the 'igb_uio' kernel module before querying or "
++ 		echo "# adjusting device bindings"
++ 	fi
++ }
++ 
++ #
++ # Uses dpdk-devbind.py to move devices to work with kernel drivers again
++ #
++ unbind_devices()
++ {
++ 	PCI_PATH=$1
++ 	DRV=$2
++ 	${RTE_SDK}/usertools/dpdk-devbind.py --status
++ 	echo ""
++ 	echo -n "Enter PCI address of device to unbind: "
++ 	echo ""
++ 	echo -n "Enter name of kernel driver to bind the device to: "
++ 	sudo ${RTE_SDK}/usertools/dpdk-devbind.py -b $DRV $PCI_PATH && echo "OK"
++ }
++ 
++ QUIT=0

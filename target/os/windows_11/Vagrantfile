@@ -1,0 +1,164 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+# If you do "vagrant up --provider=libvirt" after using virtualbox, you may 
+# need to do "sudo ip addr flush vboxnetX" to remove the IP address linked 
+# to a vboxnetX interface.
+# If you do "vagrant up --provider=virtualbox" after libvirt, you may need 
+# to do "sudo ip addr flush virbrX" to remove the IP address linked to a
+# virbrX interface.
+
+base_memory = ENV["VAGRANT_PYROLYSE_BASE_MEMORY"] || 1024
+base_cpus = ENV["VAGRANT_PYROLYSE_BASE_CPU"] || 2
+
+require 'json'
+conf_path = "conf.json"
+file = open(conf_path)
+json_s = file.read
+network_config = JSON.parse(json_s)
+
+base_mac_addr = network_config["base"]["mac_addr"]
+base_ipv4_addr = network_config["base"]["ipv4_addr"]
+base_ipv6_addr = network_config["base"]["ipv6_addr"]
+base_network_interface = network_config["base"]["network_interface"]
+
+target_mac_addr = network_config["target"]["mac_addr"]
+target_ipv4_addr = network_config["target"]["ipv4_addr"]
+target_ipv6_addr = network_config["target"]["ipv6_addr"]
+target_family = network_config["target"]["family"]
+target_name = network_config["target"]["name"]
+
+base_mac_addr_with_colons = base_mac_addr.scan(/.{1,2}/).join(":")
+target_mac_addr_with_colons = target_mac_addr.scan(/.{1,2}/).join(":")
+
+Vagrant.configure("2") do |config|
+  config.vm.define "base" do |base|
+    base.vm.box = "debian/testing64"
+    base.vm.box_version = "20250426.1"
+    
+    base.vm.provider "virtualbox" do |v|
+      v.memory = base_memory
+      v.cpus = base_cpus
+    end
+    
+    base.vm.network "private_network", name: "vboxnet2", ip: base_ipv4_addr, :mac => base_mac_addr
+    base.vm.provision "shell", run: "always", args: base_ipv6_addr, inline: "ip -6 addr add $1/64 dev eth1"
+    base.vm.hostname = "base"
+    
+    base.vm.provider :virtualbox do |vb, override|
+      # We deactivate guest because vboxsf is not working if we do not (Debian 10 Buster/virtualbox-6.1 from Oracle repository).
+      override.vbguest.auto_update = false
+    end
+    
+    base.vm.synced_folder ".", "/vagrant", disabled: true
+    # This setups vboxsf when using VirtualBox.
+    base.vm.synced_folder "../../..", "/home/vagrant/pyrolyse"
+    # This replace the default rsync method by NFS when using libvirt.
+    base.vm.provider :libvirt do |lv, override|
+      override.vm.synced_folder "../../..", "/home/vagrant/pyrolyse", type: "nfs"
+    end
+    
+    base.vm.provision "shell", inline: <<-SHELL
+      apt update
+      
+      # IP experiments
+      apt install -y --no-install-recommends tcpdump tcpreplay ethtool python3-scapy
+      ethtool -K eth1 tso off gso off rxvlan off txvlan off ufo off gro off lro off tx off sg off rx off
+      
+      # TCP experiments
+      apt install -y --no-install-recommends unzip net-tools parallel jq
+
+      echo "export PYROLYSE_PATH=/home/vagrant/pyrolyse" >> /home/vagrant/.bashrc
+    SHELL
+    
+    base.vm.provision "shell", run: "always", args: base_mac_addr_with_colons, inline: <<-SHELL
+      echo "export BASE_MAC_ADDR=$1" >> /home/vagrant/.bashrc
+    SHELL
+    base.vm.provision "shell", run: "always", args: [base_ipv4_addr, base_ipv6_addr, base_network_interface], inline: <<-SHELL
+      echo "export BASE_IPV4_ADDR=$1" >> /home/vagrant/.bashrc
+      echo "export BASE_IPV6_ADDR=$2" >> /home/vagrant/.bashrc
+      echo "export BASE_NETWORK_INTERFACE=$3" >> /home/vagrant/.bashrc
+    SHELL
+    
+    base.vm.provision "shell", run: "always", args: target_mac_addr_with_colons, inline: <<-SHELL
+      echo "export TARGET_MAC_ADDR=$1" >> /home/vagrant/.bashrc
+    SHELL
+    base.vm.provision "shell", run: "always", args: [target_ipv4_addr, target_ipv6_addr], inline: <<-SHELL
+      echo "export TARGET_IPV4_ADDR=$1" >> /home/vagrant/.bashrc
+      echo "export TARGET_IPV6_ADDR=$2" >> /home/vagrant/.bashrc
+    SHELL
+    base.vm.provision "shell", run: "always", args: [target_family, target_name], inline: <<-SHELL
+      echo "export TARGET_FAMILY=$1" >> /home/vagrant/.bashrc
+      echo "export TARGET_NAME=$2" >> /home/vagrant/.bashrc
+    SHELL
+
+    # We populate the ARP table so that the Rust TCP testing tool can get the MAC/IP info.
+    base.vm.provision "shell", run: "always", args: [target_ipv4_addr, target_mac_addr], inline: <<-SHELL
+      arp -s $1 $2
+    SHELL
+
+    # Next line is needed to block answer to UDP echo data when testing IP fragmentation.
+    base.vm.provision "shell", run: "always", inline: <<-SHELL
+      iptables -I OUTPUT -p icmp --icmp-type port-unreachable -j DROP
+    SHELL
+  end
+  
+  config.vm.define "target" do |target|
+    # Every Vagrant development environment requires a box. You can search for
+    # boxes at https://vagrantcloud.com/search.
+    target.vm.box = "gusztavvargadr/windows-11"
+    target.vm.box_version = "2302.0.2409"
+    #target.vm.box = "baunegaard/win11pro-en"
+    #target.vm.box_version = "1.0.0"
+    #target.vm.box = "StefanScherer/windows_11"
+    #target.vm.box_version = "2021.12.09"
+    #target.vm.box = "dstoliker/windows11"
+    #target.vm.box_version = "1.0.20230928203642"
+
+    target.vm.network "private_network", name: "vboxnet2", ip: target_ipv4_addr, :mac => target_mac_addr
+    # TODO: test and fix if necessary
+    target.vm.provision "shell", args: target_ipv6_addr, inline: "New-NetIPAddress -InterfaceAlias 'Ethernet 2' -IPAddress $args[0]"
+    # TODO : understand why $args instead of $args[0] for previous command
+    target.vm.provision "shell", args: base_ipv6_addr_without_quotes, inline: 'New-NetRoute -DestinationPrefix "$args/64" -InterfaceAlias "Ethernet 2" -NextHop ::'
+    target.vm.hostname = "target"
+    target.vm.synced_folder "../../..", "c:\\vagrant"
+
+    # Guest OS Setting
+    target.vm.guest = :windows
+
+    # Configure Vagrant to use WinRM instead of SSH
+    target.vm.communicator = "winrm"
+
+    # Configure WinRM Connectivity
+    target.winrm.username = "vagrant"
+    target.winrm.password = "vagrant"
+    target.winrm.timeout = 50000
+    target.winrm.retry_delay = 10
+    target.winrm.retry_limit = 1000
+
+    target.vm.provider "virtualbox" do |vb|
+      # Display the VirtualBox GUI when booting the machine
+      vb.gui = true
+  
+      # Customize the CPU and memory on the VM
+      vb.cpus = "2"
+      vb.memory = "4096"
+    end
+
+    target.vm.provision "shell", inline: "New-NetFirewallRule -DisplayName 'Allow inbound ICMPv4' -Direction Inbound -Protocol ICMPv4 -IcmpType 8 -Action Allow"
+    target.vm.provision "shell", inline: "New-NetFirewallRule -DisplayName 'Allow inbound ICMPv6' -Direction Inbound -Protocol ICMPv6 -Action Allow"
+    target.vm.provision "shell", inline: "Set-ItemProperty -path 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters' -Name 'DisableTaskOffload' -value 1"
+    target.vm.provision "shell", inline: "New-NetFirewallRule -DisplayName 'Allow inbound TCP Echo' -Direction Inbound -Protocol TCP -LocalPort 7 -Action Allow"
+    target.vm.provision "shell", inline: "Get-WindowsCapability -Name RSAT.ServerManager* -Online | Add-WindowsCapability -Online"
+    target.vm.provision "shell", inline: "Enable-WindowsOptionalFeature -Online -FeatureName 'SimpleTCP' -All"
+    target.vm.provision :reload
+  end
+end
+
+# Test commands (from base)
+# IPv4: ping "${TARGET_IPV4_ADDR}"
+# IPv6: ping "${TARGET_IPV6_ADDR}"
+# TCP: sudo hping3 -S "${TARGET_IPV4_ADDR}" -p 7
+# TCP: nc "${TARGET_IPV4_ADDR}" 7 (type "toto" and observe "toto" sent back)
+
+

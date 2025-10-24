@@ -1,0 +1,253 @@
+*** lwip_ref/contrib/examples/example_app/lwipcfg.h	1970-01-01 00:00:00.000000000 +0000
+--- lwip_mod/contrib/examples/example_app/lwipcfg.h	2025-02-28 09:40:48.272122912 +0000
+***************
+*** 0 ****
+--- 1,76 ----
++ /**
++  * Additional settings for the win32 port.
++  * Copy this to lwipcfg_msvc.h and make the config changes you need.
++  */
++ 
++ /* configuration for this port */
++ #define PPP_USERNAME  "Admin"
++ #define PPP_PASSWORD  "pass"
++ 
++ /** Define this to the index of the windows network adapter to use */
++ #define PACKET_LIB_ADAPTER_NR         1
++ /** Define this to the GUID of the windows network adapter to use
++  * or NOT define this if you want PACKET_LIB_ADAPTER_NR to be used */ 
++ /*#define PACKET_LIB_ADAPTER_GUID       "00000000-0000-0000-0000-000000000000"*/
++ /*#define PACKET_LIB_GET_ADAPTER_NETADDRESS(addr) IP4_ADDR((addr), 192,168,1,0)*/
++ /*#define PACKET_LIB_QUIET*/
++ 
++ /* If these 2 are not defined, the corresponding config setting is used */
++ #define USE_DHCP    0
++ #define USE_AUTOIP  0
++ 
++ /* #define USE_PCAPIF 1 */
++ #define LWIP_PORT_INIT_IPADDR(addr)   IP4_ADDR((addr), 192,168,57,93)
++ #define LWIP_PORT_INIT_GW(addr)       IP4_ADDR((addr), 192,168,57,92)
++ #define LWIP_PORT_INIT_NETMASK(addr)  IP4_ADDR((addr), 255,255,255,0)
++ 
++ /* remember to change this MAC address to suit your needs!
++    the last octet will be increased by netif->num for each netif */
++ #define LWIP_MAC_ADDR_BASE            {0x00,0x01,0x02,0x03,0x04,0x05}
++ 
++ /* #define USE_SLIPIF 0 */
++ /* #define SIO_USE_COMPORT 0 */
++ #ifdef USE_SLIPIF
++ #if USE_SLIPIF
++ #define LWIP_PORT_INIT_SLIP1_IPADDR(addr)   IP4_ADDR((addr), 192, 168,   2, 2)
++ #define LWIP_PORT_INIT_SLIP1_GW(addr)       IP4_ADDR((addr), 192, 168,   2, 1)
++ #define LWIP_PORT_INIT_SLIP1_NETMASK(addr)  IP4_ADDR((addr), 255, 255, 255, 0)
++ #if USE_SLIPIF > 1
++ #define LWIP_PORT_INIT_SLIP2_IPADDR(addr)   IP4_ADDR((addr), 192, 168,   2, 1)
++ #define LWIP_PORT_INIT_SLIP2_GW(addr)       IP4_ADDR((addr), 0,     0,   0, 0)
++ #define LWIP_PORT_INIT_SLIP2_NETMASK(addr)  IP4_ADDR((addr), 255, 255, 255, 0)*/
++ #endif /* USE_SLIPIF > 1 */
++ #endif /* USE_SLIPIF */
++ #endif /* USE_SLIPIF */
++ 
++ /* configuration for applications */
++ 
++ #define LWIP_CHARGEN_APP              0
++ #define LWIP_DNS_APP                  0
++ #define LWIP_HTTPD_APP                0
++ /* Set this to 1 to use the netconn http server,
++  * otherwise the raw api server will be used. */
++ /*#define LWIP_HTTPD_APP_NETCONN     */
++ #define LWIP_NETBIOS_APP              0
++ #define LWIP_NETIO_APP                0
++ #define LWIP_MDNS_APP                 0
++ #define LWIP_MQTT_APP                 0
++ #define LWIP_PING_APP                 0
++ #define LWIP_RTP_APP                  0
++ #define LWIP_SHELL_APP                0
++ #define LWIP_SNMP_APP                 0
++ #define LWIP_SNTP_APP                 0
++ #define LWIP_SOCKET_EXAMPLES_APP      0
++ #define LWIP_TCPECHO_APP              1
++ /* Set this to 1 to use the netconn tcpecho server,
++  * otherwise the raw api server will be used. */
++ /*#define LWIP_TCPECHO_APP_NETCONN   */
++ #define LWIP_TFTP_APP                 0
++ #define LWIP_UDPECHO_APP              0
++ #define LWIP_LWIPERF_APP              0
++ 
++ /*#define USE_DHCP    1*/
++ /*#define USE_AUTOIP  1*/
++ 
++ /* define this to your custom application-init function */
++ /* #define LWIP_APP_INIT my_app_init() */
+*** lwip_ref/contrib/examples/example_app/lwipopts.h	2025-02-27 17:11:17.679777244 +0000
+--- lwip_mod/contrib/examples/example_app/lwipopts.h	2025-02-27 17:15:48.867885943 +0000
+***************
+*** 231,236 ****
+--- 231,279 ----
+  #define IP_FRAG                 1
+  #define IPV6_FRAG_COPYHEADER    1
+  
++ /* PYROLYSE */
++ #define IPV6_REASS_MAXAGE               60
++ #define LWIP_IPV6_SCOPES                (LWIP_IPV6 && !LWIP_SINGLE_NETIF)
++ #define LWIP_IPV6_SCOPES_DEBUG          0
++ #define LWIP_IPV6_NUM_ADDRESSES         3
++ #define LWIP_IPV6_FORWARD               0
++ #define LWIP_IPV6_FRAG                  1
++ #define LWIP_IPV6_REASS                 (LWIP_IPV6)
++ #define LWIP_IPV6_SEND_ROUTER_SOLICIT   1
++ #define LWIP_IPV6_AUTOCONFIG            (LWIP_IPV6)
++ #define LWIP_IPV6_ADDRESS_LIFETIMES     (LWIP_IPV6_AUTOCONFIG)
++ #define LWIP_IPV6_DUP_DETECT_ATTEMPTS   1
++ #define LWIP_ICMP6                      (LWIP_IPV6)
++ #define LWIP_ICMP6_DATASIZE             8
++ #define LWIP_ICMP6_HL                   255
++ /* #define LWIP_IPV6_MLD                   (LWIP_IPV6) */
++ #define LWIP_IPV6_MLD                   0
++ #define MEMP_NUM_MLD6_GROUP             4
++ #define LWIP_ND6_QUEUEING               (LWIP_IPV6)
++ #define MEMP_NUM_ND6_QUEUE              20
++ #define LWIP_ND6_NUM_NEIGHBORS          10
++ #define LWIP_ND6_NUM_DESTINATIONS       10
++ #define LWIP_ND6_NUM_PREFIXES           5
++ #define LWIP_ND6_NUM_ROUTERS            3
++ #define LWIP_ND6_MAX_MULTICAST_SOLICIT  3
++ #define LWIP_ND6_MAX_UNICAST_SOLICIT    3
++ #define LWIP_ND6_MAX_ANYCAST_DELAY_TIME 1000
++ #define LWIP_ND6_MAX_NEIGHBOR_ADVERTISEMENT  3
++ #define LWIP_ND6_REACHABLE_TIME         30000
++ #define LWIP_ND6_RETRANS_TIMER          1000
++ #define LWIP_ND6_DELAY_FIRST_PROBE_TIME 5000
++ #define LWIP_ND6_ALLOW_RA_UPDATES       1
++ #define LWIP_ND6_TCP_REACHABILITY_HINTS 1
++ #define LWIP_ND6_RDNSS_MAX_DNS_SERVERS  0
++ #define LWIP_IPV6_DHCP6                 0
++ #define LWIP_IPV6_DHCP6_STATEFUL        0
++ #define LWIP_IPV6_DHCP6_STATELESS       LWIP_IPV6_DHCP6
++ #define LWIP_DHCP6_GET_NTP_SRV          0
++ #define LWIP_DHCP6_MAX_NTP_SERVERS      1
++ #define LWIP_DHCP6_MAX_DNS_SERVERS      DNS_MAX_SERVERS
++ /* PYROLYSE */
++ 
++ 
+  /* ---------- ICMP options ---------- */
+  #define ICMP_TTL                255
+  
+***************
+*** 251,257 ****
+  
+  
+  /* ---------- UDP options ---------- */
+! #define LWIP_UDP                1
+  #define LWIP_UDPLITE            LWIP_UDP
+  #define UDP_TTL                 255
+  
+--- 294,300 ----
+  
+  
+  /* ---------- UDP options ---------- */
+! #define LWIP_UDP                0
+  #define LWIP_UDPLITE            LWIP_UDP
+  #define UDP_TTL                 255
+  
+*** lwip_ref/contrib/examples/example_app/test.c	2025-02-27 17:11:17.679777244 +0000
+--- lwip_mod/contrib/examples/example_app/test.c	2025-02-28 09:40:25.456189154 +0000
+***************
+*** 302,307 ****
+--- 302,314 ----
+  #if LWIP_IPV4 && USE_ETHERNET
+    ip4_addr_t ipaddr, netmask, gw;
+  #endif /* LWIP_IPV4 && USE_ETHERNET */
++ 
++   /* PYROLYSE */
++   err_t err_ipv6;
++   s8_t ipaddr_index;
++   ip6_addr_t ip6_addr_t_app;
++   /* PYROLYSE */
++ 
+  #if USE_SLIPIF
+    u8_t num_slip1 = 0;
+  #if LWIP_IPV4
+***************
+*** 371,377 ****
+--- 378,394 ----
+  #endif
+  #if LWIP_IPV6
+    netif_create_ip6_linklocal_address(netif_default, 1);
++   /* PYROLYSE */
++   IP6_ADDR(&ip6_addr_t_app, htonl(strtol("fd000000", NULL, 16)), htonl(strtol("57", NULL, 16)), htonl(strtol("0", NULL, 16)), htonl(strtol("93", NULL, 16)));
++   err_ipv6 = netif_add_ip6_address(netif_default, &ip6_addr_t_app, &ipaddr_index);
++   LWIP_ASSERT("netif_add_ip6_address failed", err_ipv6 == ERR_OK);
++   netif_ip6_addr_set(netif_default, 1, &ip6_addr_t_app);
++   netif_ip6_addr_set_state(netif_default, 1, 16);
++   /* PYROLYSE */
+    printf("ip6 linklocal address: %s\n", ip6addr_ntoa(netif_ip6_addr(netif_default, 0)));
++   /* PYROLYSE */
++   printf("ip6 custom address: %s\n", ip6addr_ntoa(netif_ip6_addr(netif_default, 1)));
++   /* PYROLYSE */
+  #endif /* LWIP_IPV6 */
+  #if LWIP_NETIF_STATUS_CALLBACK
+    netif_set_status_callback(netif_default, status_callback);
+*** lwip_ref/src/core/ipv6/nd6.c	2025-02-27 17:11:17.691777315 +0000
+--- lwip_mod/src/core/ipv6/nd6.c	2025-02-28 09:39:36.500331281 +0000
+***************
+*** 150,155 ****
+--- 150,168 ----
+  #endif /* LWIP_ND6_QUEUEING */
+  static void nd6_send_q(s8_t i);
+  
++ /* PYROLYSE */
++ ip6_addr_t ip6_addr_t_gw_macro;
++ 
++ ip6_addr_t * build_ip6_addr_gw(void);
++ 
++ ip6_addr_t *
++ build_ip6_addr_gw(void) {
++   IP6_ADDR(&ip6_addr_t_gw_macro, htonl(strtol("fd000000", NULL, 16)), htonl(strtol("57", NULL, 16)), htonl(strtol("0", NULL, 16)), htonl(strtol("92", NULL, 16)));  
++   return &ip6_addr_t_gw_macro;
++ }
++ 
++ #define LWIP_HOOK_ND6_GET_GW(netif,dest) build_ip6_addr_gw()
++ /* PYROLYSE */
+  
+  /**
+   * A local address has been determined to be a duplicate. Take the appropriate
+*** lwip_ref/contrib/ports/CMakeCommon.cmake	2025-02-28 14:13:50.366497185 +0000
+--- lwip_mod/contrib/ports/CMakeCommon.cmake	2025-02-28 14:14:24.622354293 +0000
+***************
+*** 44,50 ****
+      $<$<CONFIG:Release>:-O3>
+      -Wall
+      -pedantic
+!     -Werror
+      -Wparentheses
+      -Wsequence-point
+      -Wswitch-default
+--- 44,50 ----
+      $<$<CONFIG:Release>:-O3>
+      -Wall
+      -pedantic
+!     #-Werror
+      -Wparentheses
+      -Wsequence-point
+      -Wswitch-default
+*** lwip_ref/contrib/ports/Common.allports.mk	2025-02-28 14:13:50.366497185 +0000
+--- lwip_mod/contrib/ports/Common.allports.mk	2025-02-28 14:14:52.214288242 +0000
+***************
+*** 33,39 ****
+  #CC=clang
+  CCDEP?=$(CC)
+  
+! CFLAGS+=-g -DLWIP_DEBUG -Wall -pedantic -Werror \
+  	-Wparentheses -Wsequence-point -Wswitch-default \
+  	-Wextra -Wundef -Wshadow -Wpointer-arith -Wcast-qual \
+  	-Wc++-compat -Wwrite-strings -Wold-style-definition -Wcast-align \
+--- 33,40 ----
+  #CC=clang
+  CCDEP?=$(CC)
+  
+! #CFLAGS+=-g -DLWIP_DEBUG -Wall -pedantic -Werror \
+! CFLAGS+=-g -DLWIP_DEBUG -Wall -pedantic \
+  	-Wparentheses -Wsequence-point -Wswitch-default \
+  	-Wextra -Wundef -Wshadow -Wpointer-arith -Wcast-qual \
+  	-Wc++-compat -Wwrite-strings -Wold-style-definition -Wcast-align \

@@ -1,0 +1,15 @@
+{
+  "base": {
+    "mac_addr": "000000000046",
+    "ipv4_addr": "192.168.56.46",
+    "ipv6_addr": "fd00:0:0:56::46",
+    "network_interface": "eth1"
+  },
+  "target": {
+    "mac_addr": "000000000047",
+    "ipv4_addr": "192.168.56.47",
+    "ipv6_addr": "fd00:0:0:56::47",
+    "family": "os",
+    "name": "solaris_10"
+  }
+}

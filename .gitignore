@@ -1,0 +1,17 @@
+
+# Ignore
+**/log*/**
+**/sparq_dir
+**/sparq_pair
+**/sparq_triplet_all
+**/sparq_triplet_consistent
+**/*.pcap
+**/*.json
+**/*.csv
+**/*.log
+*log
+
+# Allow
+!**/conf.json
+
+

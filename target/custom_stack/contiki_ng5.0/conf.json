@@ -1,0 +1,23 @@
+
+{
+  "base": {
+    "mac_addr": "000000000120",
+    "ipv4_addr": "192.168.56.120",
+    "ipv6_addr": "fd00:0:0:56::120",
+    "network_interface": "eth1"
+  },
+  "target": {
+    "mac_addr": "000000000121",
+    "ipv4_addr": "192.168.56.121",
+    "ipv6_addr": "fd00:0:0:56::121",
+    "family": "custom_stack",
+    "name": "contiki_ng5.0"
+  },
+  "bonus_network": {
+    "ipv4_addr": "192.168.57.0",
+    "ipv6_addr": "fd00:0:0:57::"
+  },
+  "app": {
+    "ipv6_addr": "fd00:0:0:57::123"
+  }
+}

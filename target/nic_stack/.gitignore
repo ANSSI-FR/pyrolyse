@@ -1,0 +1,14 @@
+
+**/*.pcap
+**/*.json
+**/*.csv
+**/*.pdf
+**/*.png
+**/inconsistencies_number.txt
+**/ipv4_*
+**/ipv6_*
+**/tc_*
+**/output*
+**/tcp_*
+**/log*
+**/*.log

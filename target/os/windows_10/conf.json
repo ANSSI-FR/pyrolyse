@@ -1,0 +1,15 @@
+{
+  "base": {
+    "mac_addr": "000000000020",
+    "ipv4_addr": "192.168.56.20",
+    "ipv6_addr": "fd00:0:0:56::20",
+    "network_interface": "eth1"
+  },
+  "target": {
+    "mac_addr": "000000000021",
+    "ipv4_addr": "192.168.56.21",
+    "ipv6_addr": "fd00:0:0:56::21",
+    "family": "os",
+    "name": "windows_10"
+  }
+}

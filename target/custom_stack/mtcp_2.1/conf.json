@@ -1,0 +1,21 @@
+
+{
+  "base": {
+    "mac_addr": "000000000080",
+    "ipv4_addr": "192.168.56.80",
+    "ipv6_addr": "fd00:0:0:56::80",
+    "network_interface": "eth1"
+  },
+  "target": {
+    "mac_addr": "000000000081",
+    "ipv4_addr": "192.168.56.81",
+    "ipv6_addr": "fd00:0:0:56::81",
+    "family": "custom_stack",
+    "name": "mtcp_2.1"
+  },
+  "app": {
+    "mac_addr": "000000000082",
+    "ipv4_addr": "192.168.56.82",
+    "ipv6_addr": "fd00:0:0:56::82"
+  }
+}

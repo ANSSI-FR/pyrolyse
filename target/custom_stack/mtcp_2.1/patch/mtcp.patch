@@ -1,0 +1,373 @@
+** mtcp/config/route.conf      2025-02-05 17:03:06.375318369 +0000
+--- mtcp_fixed/config/route.conf        2025-02-05 16:48:59.617502029 +0000
+***************
+*** 0 ****
+--- 1,21 ----
++ # This file is routing table example of our testbed machine
++ # Copy this file to route.conf and give appropriate routes
++ # Please save this file as config/route.conf. Put the config/
++ # directory in the same directory where the binary lies.
++ #
++ # (Destination address)/(Prefix) (Device name)
++ #
++ #
++ # Add entry for default gateway route as:
++ # w.x.y.z/0 dpdk0
++ # Always put the default gateway route as the last entry.
++ # Make sure that the mask (Prefix) is set to 0. For example,
++ # if the default gateway IP address is 10.0.0.10, then the
++ # entry will be:
++ # 10.0.0.10/0 dpdk0
++ #
++ 
++ ROUTES 2
++ #10.0.0.1/24 dpdk0
++ 192.168.56.80/24 dpdk0
++ 10.0.1.1/24 dpdk1
+*** mtcp/apps/example/echoserver.c      2025-02-05 17:02:43.863270509 +0000
+--- mtcp_fixed/apps/example/echoserver.c        2025-02-05 16:58:09.414686907 +0000
+***************
+*** 0 ****
+--- 1,188 ----
++ #include <stdio.h> 
++ #include <stdlib.h>
++ #include <string.h> 
++ #include <errno.h> 
++ #include <mtcp_api.h> 
++ #include <mtcp_epoll.h> 
++ #include <signal.h>
++ #include <arpa/inet.h>
++ 
++ #define MAX_EVENTS 1024
++ #define MAX_BUFFER_SIZE 1024
++ #define PORT 7
++ #define CONCURRENCY 1
++ 
++ 
++ #define DEBUG(fmt, args...)   fprintf(stderr, "[DEBUG] " fmt "\n", ## args)
++ #define ERROR(fmt, args...)   fprintf(stderr, fmt "\n", ## args)
++ #define SAMPLE(fmt, args...)  fprintf(stdout, fmt "\n", ## args)
++ 
++ /*----------------------------------------------------------------------------*/
++ struct thread_context
++ {
++       int core;
++       mctx_t mctx;
++ };
++ /*----------------------------------------------------------------------------*/
++ void
++ SignalHandler(int signum)
++ {
++       ERROR("Received SIGINT");
++       exit(-1);
++ }
++ /*----------------------------------------------------------------------------*/
++ 
++ void usage(const char *prog) {
++     fprintf(stderr, "Usage: %s <config_file>\n", prog);
++     exit(EXIT_FAILURE);
++ }
++ 
++ int main(int argc, char **argv) {
++     if (argc != 2) {
++         usage(argv[0]);
++     }
++ 
++     //mtcp
++     mctx_t mctx;
++     struct mtcp_conf mcfg;
++     struct thread_context *ctx;
++     int core = 0;
++ 
++     // This must be done before mtcp_init
++     mtcp_getconf(&mcfg);
++     mcfg.num_cores = 1;
++     mtcp_setconf(&mcfg);
++ 
++     const char *config_file = argv[1];
++     int ret = mtcp_init(config_file);
++     if (ret < 0) {
++         fprintf(stderr, "Failed to initialize mTCP: %s\n", strerror(errno));
++         exit(EXIT_FAILURE);
++     }
++ 
++     // Default simple config, this must be done after mtcp_init
++     mtcp_getconf(&mcfg);
++     mcfg.max_concurrency = 3 * CONCURRENCY;
++     mcfg.max_num_buffers = 3 * CONCURRENCY;
++     mtcp_setconf(&mcfg);
++    
++     // Catch ctrl+c to clean up
++     mtcp_register_signal(SIGINT, SignalHandler);
++    
++     DEBUG("Creating thread context...");
++     mtcp_core_affinitize(core);
++     ctx = (struct thread_context *) calloc(1, sizeof(struct thread_context));
++     if (!ctx) {
++         ERROR("Failed to create context.");
++         perror("calloc");
++         return -1;
++     }
++     ctx->core = core;
++     ctx->mctx = mtcp_create_context(core);
++     if (!ctx->mctx) {
++         ERROR("Failed to create mtcp context.");
++         return -1;
++     }
++     mctx = ctx->mctx;
++ 
++ 
++     int listener, ep;
++     ep = mtcp_epoll_create(mctx, MAX_EVENTS); // Create epoll instance
++     if (ep < 0) {
++         fprintf(stderr, "Failed to create epoll instance: %s\n", strerror(errno));
++         exit(EXIT_FAILURE);
++     }
++ 
++     listener = mtcp_socket(mctx, AF_INET, SOCK_STREAM, 0); // Create a socket
++     if (listener < 0) {
++         fprintf(stderr, "Failed to create socket: %s\n", strerror(errno));
++         exit(EXIT_FAILURE);
++     }
++ 
++     int reuse = 1;
++     mtcp_setsockopt(mctx, listener, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse));
++ 
++     struct sockaddr_in saddr;
++     memset(&saddr, 0, sizeof(saddr));
++     saddr.sin_family = AF_INET;
++     saddr.sin_addr.s_addr = INADDR_ANY; // Bind to any available interface
++     //saddr.sin_addr.s_addr = inet_addr("192.168.57.63");
++     saddr.sin_port = htons(PORT);
++ 
++     ret = mtcp_bind(mctx, listener, (struct sockaddr *)&saddr, sizeof(saddr));
++     if (ret < 0) {
++         fprintf(stderr, "Failed to bind socket: %s\n", strerror(errno));
++         exit(EXIT_FAILURE);
++     }
++ 
++     int backlog = 3;
++     //ret = mtcp_listen(mctx, listener, 1024); // Start listening
++     ret = mtcp_listen(mctx, listener, backlog); // Start listening
++     if (ret < 0) {
++         fprintf(stderr, "Failed to listen on socket: %s\n", strerror(errno));
++         exit(EXIT_FAILURE);
++     }
++ 
++     struct mtcp_epoll_event ev, events[MAX_EVENTS];
++     ev.events = MTCP_EPOLLIN; // Listen for incoming connections
++     ev.data.sockid = listener;
++     mtcp_epoll_ctl(mctx, ep, MTCP_EPOLL_CTL_ADD, listener, &ev);
++ 
++     printf("Echo server is listening on port %d...\n", PORT);
++ 
++     char buffer[MAX_BUFFER_SIZE];
++     while (1) {
++         int nevents = mtcp_epoll_wait(mctx, ep, events, MAX_EVENTS, -1);
++         if (nevents < 0) {
++             if (errno != EINTR) {
++                 fprintf(stderr, "epoll_wait failed: %s\n", strerror(errno));
++             }
++             continue;
++         }
++ 
++         for (int i = 0; i < nevents; i++) {
++             if (events[i].data.sockid == listener) {
++                 printf("New connexion");
++                 // Accept new connection
++                 int cfd = mtcp_accept(mctx, listener, NULL, NULL);
++                 if (cfd < 0) {
++                     fprintf(stderr, "Failed to accept connection: %s\n", strerror(errno));
++                     continue;
++                 }
++ 
++                 // Add new connection to epoll
++                 printf("Add new connexion to epoll");
++                 struct mtcp_epoll_event conn_ev;
++                 conn_ev.events = MTCP_EPOLLIN;
++                 conn_ev.data.sockid = cfd;
++                 mtcp_epoll_ctl(mctx, ep, MTCP_EPOLL_CTL_ADD, cfd, &conn_ev);
++ 
++                 printf("New connection accepted (fd: %d).\n", cfd);
++             } else {
++                 // Handle existing connection
++                 printf("Handle existing connexion");
++                 int sockid = events[i].data.sockid;
++                 if (events[i].events & MTCP_EPOLLIN) {
++                     int ret = mtcp_read(mctx, sockid, buffer, MAX_BUFFER_SIZE);
++                     if (ret <= 0) {
++                         if (ret == 0 || errno == ECONNRESET) {
++                             printf("Connection closed (fd: %d).\n", sockid);
++                             mtcp_epoll_ctl(mctx, ep, MTCP_EPOLL_CTL_DEL, sockid, NULL);
++                             mtcp_close(mctx, sockid);
++                         } else {
++                             fprintf(stderr, "Failed to read from socket: %s\n", strerror(errno));
++                         }
++                     } else {
++                         // Echo data back to client
++                         mtcp_write(mctx, sockid, buffer, ret);
++                     }
++                 }
++             }
++         }
++     }
++ 
++     mtcp_destroy_context(mctx);
++     mtcp_destroy();
++     return 0;
++ }
++ 
+*** mtcp/apps/example/echoserver.conf   2025-02-05 17:02:46.863276878 +0000
+--- mtcp_fixed/apps/example/echoserver.conf     2025-01-23 17:10:18.490623074 +0000
+***************
+*** 0 ****
+--- 1,85 ----
++ ############### mtcp configuration file ###############
++ 
++ # The underlying I/O module you want to use. Please
++ # enable only one out of the four.
++ #io = psio
++ #io = onvm
++ #io = netmap
++ io = dpdk
++ 
++ # No. of cores setting (enabling this option will override
++ # the `cpu' config for those applications that accept
++ # num_cores as command line arguments)
++ # 
++ # e.g. in case ./epwget is executed with `-N 4', the
++ # mtcp core will still invoke 8 mTCP threads if the
++ # following line is uncommented.
++ #num_cores = 8
++ 
++ # Number of memory channels per processor socket (dpdk-only)
++ num_mem_ch = 4
++ 
++ #--- ONVM specific args ---#
++ # Service id (required)
++ #onvm_serv = 2
++ # Dest id (used to forward traffic to specific NF)
++ #onvm_dest = 1
++ 
++ # Sample ONVM configurations
++ # Single node epserver <-> epwget 
++ #onvm_serv = 2
++ #onvm_dest = 1
++ 
++ # Simple client for multi node setup
++ #onvm_serv = 1
++ #--------------------------#
++ 
++ # Used port (please adjust accordingly)
++ #------ PSIO ports -------#
++ #port = xge0 xge1
++ #port = xge1
++ #------ DPDK ports -------#
++ port = dpdk0
++ #port = dpdk1
++ #port = dpdk0 dpdk1
++ 
++ # Enable multi-process support
++ #multiprocess = 1
++ 
++ # Congestion control algorithm
++ # (only available when configured with --enable-ccp)
++ # cc = reno
++ # cc = cubic
++ 
++ # Receive buffer size of sockets; if not set: rcvbuf = sndbuf
++ rcvbuf = 8192
++ 
++ # Send buffer size of sockets; if not set: sndbuf = rcvbuf
++ sndbuf = 8192
++ 
++ # if sndbuf & rcvbuf not set: sndbuf = rcvbuf = 8192
++ 
++ # Maximum concurrency per core (default = 10000)
++ #max_concurrency = 10000
++ 
++ # Maximum number of socket buffers per core (default = 10000)
++ # Set this to small value if there are many idle connections
++ #max_num_buffers = 10000
++ 
++ # TCO timeout seconds
++ # (tcp_timeout = -1 can disable the timeout check)
++ tcp_timeout = 30
++ 
++ # TCP timewait seconds
++ tcp_timewait = 0
++ 
++ # Interface to print stats (please adjust accordingly)
++ # You can enable multiple ports in a line
++ #------ PSIO ports -------#
++ #stat_print = xge0
++ #stat_print = xge1
++ #------ DPDK ports -------#
++ stat_print = dpdk0
++ #stat_print = dpdk0 dpdk1
++ 
++ #######################################################
+--- mtcp/apps/example/Makefile.in	2025-02-25 15:42:44.545267915 +0000
++++ mtcp_fixed/apps/example/Makefile	2025-02-25 15:35:46.419793516 +0000
+@@ -1,13 +1,13 @@
+ # TODO: Make this Makefile.in pretty
+ 
+-TARGETS = epserver epwget
+-CC=@CC@ -g -O3 -Wall -Werror -fgnu89-inline
+-DPDK=@DPDK@
+-PS=@PSIO@
+-NETMAP=@NETMAP@
+-ONVM=@ONVM@
+-CCP=@CCP@
+-CFLAGS=@CFLAGS@
++TARGETS = epserver epwget echoserver
++CC=gcc -g -O3 -Wall -Werror -fgnu89-inline
++DPDK=1
++PS=0
++NETMAP=0
++ONVM=0
++CCP=
++CFLAGS=-g -O2
+ 
+ # Add arch-specific optimization
+ ifeq ($(shell uname -m),x86_64)
+@@ -54,11 +54,11 @@
+ $(error "Please define RTE_TARGET environment variable")
+ endif
+ 
+-INC += -I@ONVMLIBPATH@/onvm_nflib
+-INC += -I@ONVMLIBPATH@/lib
++INC += -I/onvm_nflib
++INC += -I/lib
+ INC += -DENABLE_ONVM
+-LIBS += @ONVMLIBPATH@/onvm_nflib/$(RTE_TARGET)/libonvm.a
+-LIBS += @ONVMLIBPATH@/lib/$(RTE_TARGET)/lib/libonvmhelper.a -lm
++LIBS += /onvm_nflib/$(RTE_TARGET)/libonvm.a
++LIBS += /lib/$(RTE_TARGET)/lib/libonvmhelper.a -lm
+ endif
+ 
+ ifeq ($V,) # no echo
+@@ -76,7 +76,7 @@
+ INC += -I$(LIBCCP)
+ endif
+ 
+-all: epserver epwget
++all: epserver epwget echoserver
+ 
+ epserver.o: epserver.c
+ 	$(MSG) "   CC $<"
+@@ -94,6 +94,14 @@
+ 	$(MSG) "   LD $<"
+ 	$(HIDE) ${CC} $< ${LIBS} ${UTIL_OBJ} -o $@
+ 
++echoserver.o: echoserver.c
++	$(MSG) "   CC $<"
++	$(HIDE) ${CC} -c $< ${CFLAGS} ${INC}
++
++echoserver: echoserver.o ${MTCP_FLD}/lib/libmtcp.a
++	$(MSG) "   LD $<"
++	$(HIDE) ${CC} $< ${LIBS} ${UTIL_OBJ} -o $@
++
+ clean:
+ 	$(MSG) "   CLEAN $(TARGETS)"
+ 	$(HIDE) rm -f *~ *.o ${TARGETS} log_*

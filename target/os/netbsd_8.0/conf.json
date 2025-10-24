@@ -1,0 +1,15 @@
+{
+  "base": {
+    "mac_addr": "000000000072",
+    "ipv4_addr": "192.168.56.72",
+    "ipv6_addr": "fd00:0:0:56::72",
+    "network_interface": "eth1"
+  },
+  "target": {
+    "mac_addr": "000000000073",
+    "ipv4_addr": "192.168.56.73",
+    "ipv6_addr": "fd00:0:0:56::73",
+    "family": "os",
+    "name": "netbsd_8.0"
+  }
+}

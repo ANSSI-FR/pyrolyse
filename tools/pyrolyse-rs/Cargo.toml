@@ -1,0 +1,81 @@
+[package]
+name = "pyrolyse-rs"
+version = "0.1.0"
+authors = [ "Johan Mazel <jmazel@ssi.gouv.fr>", "Lucas Aubard" ]
+edition = "2024"
+license = "MIT/Apache-2.0"
+
+[[bin]]
+name = "generate_consistent_relation_pair_triplet"
+path = "src/bin/generate_consistent_relation_pair_triplet.rs"
+
+[[bin]]
+name = "export_chunk_pattern"
+path = "src/bin/export_chunk_pattern.rs"
+
+# [[bin]]
+# name = "generate_byte_sequence"
+# path = "src/bin/generate_byte_sequence.rs"
+
+[[bin]]
+name = "remove_duplicate_byte_sequence"
+path = "src/bin/remove_duplicate_byte_sequence.rs"
+
+[[bin]]
+name = "diff_byte_time_sequence"
+path = "src/bin/diff_byte_time_sequence.rs"
+
+[[bin]]
+name = "generate_byte_time_sequence_single"
+path = "src/bin/generate_byte_time_sequence_single.rs"
+
+[[bin]]
+name = "generate_trace_ip_fragmentation"
+path = "src/bin/generate_trace_ip_fragmentation.rs"
+
+# [[bin]]
+# name = "generate_trace_ip_fragmentation_icmp_all"
+# path = "src/bin/generate_trace_ip_fragmentation_icmp_all.rs"
+
+[[bin]]
+name = "send_tcp_chunk"
+path = "src/bin/send_tcp_chunk.rs"
+
+[[bin]]
+name = "extract_ip_full_policies"
+path = "src/bin/extract_ip_full_policies.rs"
+
+[[bin]]
+name = "extract_tcp_full_policies"
+path = "src/bin/extract_tcp_full_policies.rs"
+
+[[bin]]
+name = "generate_ids_signatures"
+path = "src/bin/generate_ids_signatures.rs"
+
+[lib]
+name = "rst_lib"
+path = "src/lib/lib.rs"
+
+[dependencies]
+clap = "4.5.49" 
+counter = "0.7.0"
+csv = "1.4.0"
+cursock = "1.2.7"
+derive-getters = "0.5.0"
+env_logger = "0.11.8"
+intervals-general = "0.1.1"
+itertools = "0.14.0"
+libc = "0.2.177"
+local-ip-address = "0.6.5"
+log = "0.4.28"
+netneighbours = "0.1.2"
+pcap = "2.3.0"
+pcap-parser = { version = "0.17.0", features = ["data","serialize"] }
+portion-rs = "0.3.1"
+# TODO: update to pnet = "0.35.0" if possible
+pnet = { git = "https://github.com/infosechoudini/libpnet.git", rev = "80d9eb49c8bd5e3d1410bab9f2db6bcec8b8d146", features = ["std"]  }
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.145"
+subprocess = "0.2.9"
+hex = "0.4.3"

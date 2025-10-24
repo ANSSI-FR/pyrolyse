@@ -1,0 +1,39 @@
+{
+  "base": {
+    "mac_addr": "000000000140",
+    "ipv4_addr": "192.168.56.140",
+    "ipv6_addr": "fd00:0:0:56::140",
+    "network_interface": "eth1"
+  },
+  "target": {
+    "family": "custom_stack",
+    "name": "picotcp_2.1"
+  },
+  "bonus_network": {
+    "ipv4_addr": "192.168.57.0",
+    "ipv6_addr": "fd00:0:0:57::"
+  },
+  "target_v4": {
+    "mac_addr": "000000000141",
+    "ipv4_addr": "192.168.56.141",
+    "ipv6_addr": "fd00:0:0:56::141"
+  },
+  "tap0_v4": {
+    "ipv4_addr": "192.168.57.142"
+  },
+  "stack_v4": {
+    "ipv4_addr": "192.168.57.143"
+  },
+  "target_v6": {
+    "mac_addr": "000000000144",
+    "ipv4_addr": "192.168.56.144",
+    "ipv6_addr": "fd00:0:0:56::144"
+  },
+  "tap0_v6": {
+    "ipv4_addr": "192.168.57.145",
+    "ipv6_addr": "fd00:0:0:57::145"
+  },
+  "stack_v6": {
+    "ipv6_addr": "fd00:0:0:57::146"
+  }
+}

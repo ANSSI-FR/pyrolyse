@@ -1,0 +1,451 @@
+diff -NcrB uip/apps/echoserver/echod.c uip_ipv6/apps/echoserver/echod.c
+*** uip/apps/echoserver/echod.c	1970-01-01 01:00:00.000000000 +0100
+--- uip_ipv6/apps/echoserver/echod.c	2023-07-17 10:32:14.145545253 +0200
+***************
+*** 0 ****
+--- 1,127 ----
++ /**
++  * \addtogroup apps
++  * @{
++  */
++ 
++ /**
++  * \defgroup echod Web server
++  * @{
++  * The uIP echo server is a very simplistic implementation of an HTTP
++  * server. It can serve web pages and files from a read-only ROM
++  * filesystem, and provides a very small scripting language.
++ 
++  */
++ 
++ /**
++  * \file
++  *         Echo server
++  * \author
++  *         Adam Dunkels <adam@sics.se>
++  */
++ 
++ #include "uip.h"
++ #include "echod.h"
++ 
++ #include <stdio.h>
++ #include <string.h>
++ 
++ #define STATE_WAITING 0
++ #define STATE_OUTPUT  1
++ 
++ static void aborted(void) {}
++ static void timedout(void) {}
++ static void closed(void) {}
++ 
++ static void connected(void) {
++   struct echod_state *s = (struct echod_state *)&(uip_conn->appstate);
++   s->state = ECHO_CONNECTED;
++   s->textlen = 0;
++ }
++ static void newdata(void) {
++   printf("newdata: start\n");
++   unsigned int len;
++   unsigned char * appdata;
++ 
++   struct echod_state *s = (struct echod_state *)&(uip_conn->appstate);
++   printf("newdata: s->state == %u\n",s->state);
++   if(s->state == ECHO_CONNECTED || s->state == ECHO_ACKED) {
++     s->state = ECHO_SENT;
++ 
++     len = uip_datalen();
++     appdata = uip_appdata;
++     printf("newdata: uip_datalen() == %u\r\n", len);
++ 
++     char * data_to_send = malloc(sizeof(char)*len);
++     strncpy(data_to_send,appdata,sizeof(char)*len);
++     s->textptr = data_to_send;
++     s->textlen = len;
++ 
++     uip_send(appdata, len);
++   }
++   printf("newdata: end\n");
++ }
++ 
++ static void acked(void) {
++   printf("acked: start\n");
++   struct echod_state *s = (struct echod_state *)&(uip_conn->appstate);
++   printf("acked: s->textlen == %u\n",s->textlen);
++   switch(s->state) {
++     case ECHO_SENT:
++       printf("acked: ECHO_SENT\n");
++       s->state = ECHO_ACKED;
++       break;
++     case ECHO_ACKED:
++       printf("acked: ECHO_ACKED\n");
++       break;
++   }
++   printf("acked: end\n");
++ }
++ 
++ static void senddata(void) {
++   struct echod_state *s = (struct echod_state *)&(uip_conn->appstate);
++   if(s->textlen > 0) {
++     uip_send(s->textptr, s->textlen);
++   }
++ }
++ 
++ void echod_appcall(void) {
++   printf("echod_appcall: start\n");
++   if(uip_aborted()) {
++     aborted();
++   }
++   if(uip_timedout()) {
++     timedout();
++   }
++   if(uip_closed()) {
++     closed();
++   }
++   if(uip_connected()) {
++     connected();
++   }
++   if(uip_acked()) {
++     acked();
++   }
++   if(uip_newdata()) {
++     newdata();
++   }
++   if(uip_rexmit() ||
++      uip_newdata()) {
++     senddata();
++   }
++   printf("echod_appcall: end\n");
++ }
++ 
++ /*---------------------------------------------------------------------------*/
++ /**
++  * \brief      Initialize the echo server
++  *
++  *             This function initializes the echo server and should be
++  *             called at system boot-up.
++  */
++ void
++ echod_init(void)
++ {
++   uip_listen(HTONS(7));
++ }
++ /*---------------------------------------------------------------------------*/
++ /** @} */
+diff -NcrB uip/apps/echoserver/echod.h uip_ipv6/apps/echoserver/echod.h
+*** uip/apps/echoserver/echod.h	1970-01-01 01:00:00.000000000 +0100
+--- uip_ipv6/apps/echoserver/echod.h	2023-07-17 10:32:14.145545253 +0200
+***************
+*** 0 ****
+--- 1,20 ----
++ #ifndef __ECHOD_H__
++ #define __ECHOD_H__
++ 
++ #define ECHO_CONNECTED 0
++ #define ECHO_SENT 1
++ #define ECHO_ACKED 2
++ 
++ struct echod_state {
++   u8_t state;
++   char *textptr;
++   int textlen;
++ };
++ 
++ void echod_init(void);
++ void echod_appcall(void);
++ 
++ void echod_log(char *msg);
++ void echod_log_file(u16_t *requester, char *file);
++ 
++ #endif /* __ECHOD_H__ */
+diff -NcrB uip/apps/echoserver/echoserver.h uip_ipv6/apps/echoserver/echoserver.h
+*** uip/apps/echoserver/echoserver.h	1970-01-01 01:00:00.000000000 +0100
+--- uip_ipv6/apps/echoserver/echoserver.h	2023-07-25 13:19:28.502317610 +0200
+***************
+*** 0 ****
+--- 1,49 ----
++ /*
++  * Copyright (c) 2002, Adam Dunkels.
++  * All rights reserved.
++  *
++  * Redistribution and use in source and binary forms, with or without
++  * modification, are permitted provided that the following conditions
++  * are met:
++  * 1. Redistributions of source code must retain the above copyright
++  *    notice, this list of conditions and the following disclaimer.
++  * 2. Redistributions in binary form must reproduce the above
++  *    copyright notice, this list of conditions and the following
++  *    disclaimer in the documentation and/or other materials provided
++  *    with the distribution.
++  * 3. The name of the author may not be used to endorse or promote
++  *    products derived from this software without specific prior
++  *    written permission.
++  *
++  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS
++  * OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
++  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
++  * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
++  * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
++  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
++  * GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
++  * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
++  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
++  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
++  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++  *
++  * This file is part of the uIP TCP/IP stack
++  *
++  * $Id: echoserver.h,v 1.2 2006/06/11 21:46:38 adam Exp $
++  *
++  */
++ #ifndef __ECHOSERVER_H__
++ #define __ECHOSERVER_H__
++ 
++ #include "echod.h"
++ 
++ typedef struct echod_state uip_tcp_appstate_t;
++ /* UIP_APPCALL: the name of the application function. This function
++    must return void and take no arguments (i.e., C type "void
++    appfunc(void)"). */
++ #ifndef UIP_APPCALL
++ #define UIP_APPCALL     echod_appcall
++ #endif
++ 
++ 
++ #endif /* __ECHOSERVER_H__ */
+diff -NcrB uip/apps/echoserver/Makefile.echoserver uip_ipv6/apps/echoserver/Makefile.echoserver
+*** uip/apps/echoserver/Makefile.echoserver	1970-01-01 01:00:00.000000000 +0100
+--- uip_ipv6/apps/echoserver/Makefile.echoserver	2023-07-17 10:32:14.145545253 +0200
+***************
+*** 0 ****
+--- 1 ----
++ APP_SOURCES += echod.c
+diff -NcrB uip/uip/uipopt.h uip_ipv6/uip/uipopt.h
+*** uip/uip/uipopt.h	2023-07-25 13:19:28.094317614 +0200
+--- uip_ipv6/uip/uipopt.h	2023-10-20 15:32:26.008972422 +0200
+***************
+*** 153,159 ****
+   *
+   * \hideinitializer
+   */
+! #define UIP_REASSEMBLY 0
+  
+  /**
+   * The maximum time an IP fragment should wait in the reassembly
+--- 153,159 ----
+   *
+   * \hideinitializer
+   */
+! #define UIP_REASSEMBLY 1
+  
+  /**
+   * The maximum time an IP fragment should wait in the reassembly
+diff -NcrB uip/unix/main.c uip_ipv6/unix/main.c
+*** uip/unix/main.c	2023-07-25 13:19:28.622317609 +0200
+--- uip_ipv6/unix/main.c	2023-08-01 14:01:55.948714913 +0200
+***************
+*** 62,75 ****
+    tapdev_init();
+    uip_init();
+  
+!   uip_ipaddr(ipaddr, 192,168,0,2);
+    uip_sethostaddr(ipaddr);
+!   uip_ipaddr(ipaddr, 192,168,0,1);
+    uip_setdraddr(ipaddr);
+!   uip_ipaddr(ipaddr, 255,255,255,0);
+    uip_setnetmask(ipaddr);
+  
+!   httpd_init();
+    
+    /*  telnetd_init();*/
+    
+--- 62,78 ----
+    tapdev_init();
+    uip_init();
+  
+!   uip_ip6addr(ipaddr, strtol("fd00",NULL,16),0,0,strtol("57",NULL,16),0,0,0,strtol("30",NULL,16));
+    uip_sethostaddr(ipaddr);
+!   uip_ip6addr(ipaddr, strtol("fd00",NULL,16),0,0,strtol("57",NULL,16),0,0,0,strtol("29",NULL,16));
+    uip_setdraddr(ipaddr);
+!   u16_t v = strtol("ffff",NULL,16);
+!   uip_ip6addr(ipaddr, v,v,v,v,0,0,0,0);
+    uip_setnetmask(ipaddr);
+  
+!   /* httpd_init();*/
+! 
+!   echod_init();
+    
+    /*  telnetd_init();*/
+    
+***************
+*** 108,113 ****
+--- 111,122 ----
+  	  uip_arp_out();
+  	  tapdev_send();
+  	}
++       } else if(BUF->type == htons(UIP_ETHTYPE_IP6)) {
++ 	uip_neighbor_init();
++ 	uip_input();
++ 	if(uip_len > 0) {
++ 	  tapdev_send();
++ 	}
+        } else if(BUF->type == htons(UIP_ETHTYPE_ARP)) {
+  	uip_arp_arpin();
+  	/* If the above function invocation resulted in data that
+diff -NcrB uip/unix/Makefile uip_ipv6/unix/Makefile
+*** uip/unix/Makefile	2023-07-25 13:19:28.106317614 +0200
+--- uip_ipv6/unix/Makefile	2023-07-17 10:32:13.929545250 +0200
+***************
+*** 34,40 ****
+  
+  CC     = gcc
+  AR     = ar
+! APPS   = webserver
+  CFLAGS = -Wall -g -I../uip -I. -fpack-struct -Os
+  -include ../uip/Makefile.include
+  
+--- 34,40 ----
+  
+  CC     = gcc
+  AR     = ar
+! APPS   = echoserver
+  CFLAGS = -Wall -g -I../uip -I. -fpack-struct -Os
+  -include ../uip/Makefile.include
+  
+diff -NcrB uip/unix/tapdev.c uip_ipv6/unix/tapdev.c
+*** uip/unix/tapdev.c	2023-07-25 13:19:28.106317614 +0200
+--- uip_ipv6/unix/tapdev.c	2023-08-01 14:01:55.948714913 +0200
+***************
+*** 90,98 ****
+    }
+  #endif /* Linux */
+  
+!   snprintf(buf, sizeof(buf), "ifconfig tap0 inet %d.%d.%d.%d",
+! 	   UIP_DRIPADDR0, UIP_DRIPADDR1, UIP_DRIPADDR2, UIP_DRIPADDR3);
+    system(buf);
+  
+  }
+  /*---------------------------------------------------------------------------*/
+--- 90,105 ----
+    }
+  #endif /* Linux */
+  
+! #ifdef linux
+!   snprintf(buf, sizeof(buf), "ip addr add fd00:0:0:57:0:0:0:29/64 dev tap0");
+    system(buf);
++   snprintf(buf, sizeof(buf), "ip link set tap0 up");
++   system(buf);
++ #else
++   // TODO: add code for FreeBSD
++   // snprintf(buf, sizeof(buf), "ifconfig tap0 inet %s:%s:%s:%s",
++   //   UIP_DRIPADDR0, UIP_DRIPADDR1, UIP_DRIPADDR2, UIP_DRIPADDR3);
++ #endif /* Linux */
+  
+  }
+  /*---------------------------------------------------------------------------*/
+diff -NcrB uip/unix/uip-conf.h uip_ipv6/unix/uip-conf.h
+*** uip/unix/uip-conf.h	2023-07-25 13:19:28.106317614 +0200
+--- uip_ipv6/unix/uip-conf.h	2023-07-25 13:19:28.114317614 +0200
+***************
+*** 146,155 ****
+  /*#include "smtp.h"*/
+  /*#include "hello-world.h"*/
+  /*#include "telnetd.h"*/
+! #include "webserver.h"
+  /*#include "dhcpc.h"*/
+  /*#include "resolv.h"*/
+  /*#include "webclient.h"*/
+  
+  #endif /* __UIP_CONF_H__ */
+  
+--- 146,158 ----
+  /*#include "smtp.h"*/
+  /*#include "hello-world.h"*/
+  /*#include "telnetd.h"*/
+! /*#include "webserver.h"*/ 
+  /*#include "dhcpc.h"*/
+  /*#include "resolv.h"*/
+  /*#include "webclient.h"*/
++ #include "echoserver.h"
++ 
++ #define UIP_CONF_IPV6   1
+  
+  #endif /* __UIP_CONF_H__ */
+  
+diff -NcrB uip/uip/uip.c uip_ipv6/uip/uip.c
+*** uip/uip/uip.c	2013-03-27 20:31:37.000000000 +0000
+--- uip_ipv6/uip/uip.c	2025-03-10 10:47:33.530564254 +0000
+***************
+*** 223,228 ****
+--- 223,229 ----
+  
+  
+  /* Macros. */
++ #define ETHBUF (&uip_buf[0])
+  #define BUF ((struct uip_tcpip_hdr *)&uip_buf[UIP_LLH_LEN])
+  #define FBUF ((struct uip_tcpip_hdr *)&uip_reassbuf[0])
+  #define ICMPBUF ((struct uip_icmpip_hdr *)&uip_buf[UIP_LLH_LEN])
+***************
+*** 704,710 ****
+      
+      /* Check if we were invoked because of the perodic timer fireing. */
+    } else if(flag == UIP_TIMER) {
+! #if UIP_REASSEMBLY
+      if(uip_reasstmr != 0) {
+        --uip_reasstmr;
+      }
+--- 705,711 ----
+      
+      /* Check if we were invoked because of the perodic timer fireing. */
+    } else if(flag == UIP_TIMER) {
+! #if UIP_REASSEMBLY && !UIP_CONF_IPV6
+      if(uip_reasstmr != 0) {
+        --uip_reasstmr;
+      }
+***************
+*** 1041,1046 ****
+--- 1042,1052 ----
+        
+        ICMPBUF->reserved1 = ICMPBUF->reserved2 = ICMPBUF->reserved3 = 0;
+        
++       /* Swap MAC addresses. */
++       struct uip_eth_addr * eth_addr_dst = &ETHBUF[0];
++       memcpy(&ETHBUF[0], &ETHBUF[6], 6*sizeof(u8_t));
++       memset(&ETHBUF[6], 0, 6);
++ 
+        uip_ipaddr_copy(ICMPBUF->destipaddr, ICMPBUF->srcipaddr);
+        uip_ipaddr_copy(ICMPBUF->srcipaddr, uip_hostaddr);
+        ICMPBUF->options[0] = ICMP6_OPTION_TARGET_LINK_ADDRESS;
+***************
+*** 1048,1053 ****
+--- 1054,1060 ----
+        memcpy(&(ICMPBUF->options[2]), &uip_ethaddr, sizeof(uip_ethaddr));
+        ICMPBUF->icmpchksum = 0;
+        ICMPBUF->icmpchksum = ~uip_icmp6chksum();
++       uip_len = uip_len+UIP_LLH_LEN;
+        goto send;
+        
+      }
+***************
+*** 1057,1062 ****
+--- 1064,1074 ----
+         change the ICMP type from ECHO to ECHO_REPLY and update the
+         ICMP checksum before we return the packet. */
+  
++     /* Swap MAC addresses. */
++     struct uip_eth_addr * eth_addr_dst = &ETHBUF[0];
++     memcpy(&ETHBUF[0], &ETHBUF[6], 6*sizeof(u8_t));
++     memset(&ETHBUF[6], 0, 6);
++ 
+      ICMPBUF->type = ICMP6_ECHO_REPLY;
+      
+      uip_ipaddr_copy(BUF->destipaddr, BUF->srcipaddr);
+***************
+*** 1065,1070 ****
+--- 1077,1083 ----
+      ICMPBUF->icmpchksum = ~uip_icmp6chksum();
+      
+      UIP_STAT(++uip_stat.icmp.sent);
++     uip_len = uip_len+UIP_LLH_LEN;
+      goto send;
+    } else {
+      DEBUG_PRINTF("Unknown icmp6 message type %d\n", ICMPBUF->type);

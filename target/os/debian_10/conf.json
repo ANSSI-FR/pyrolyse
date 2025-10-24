@@ -1,0 +1,15 @@
+{
+  "base": {
+    "mac_addr": "000000000014",
+    "ipv4_addr": "192.168.60.14",
+    "ipv6_addr": "fd00:0:0:60::14",
+    "network_interface": "eth1"
+  },
+  "target": {
+    "mac_addr": "000000000015",
+    "ipv4_addr": "192.168.60.15",
+    "ipv6_addr": "fd00:0:0:60::15",
+    "family": "os",
+    "name": "debian_10"
+  }
+}

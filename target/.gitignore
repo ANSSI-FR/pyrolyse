@@ -1,0 +1,30 @@
+# file extensions
+**/*.pcap
+**/*.json
+**/*.csv
+**/*.pdf
+**/*.png
+
+# tmp metrics files
+**/OS_comparison_per_scenarii.txt
+**/inconsistencies_number.txt
+**/meta_info.txt
+
+# target dir
+**/ipv4_*
+**/ipv6_*
+**/tc_*
+**/output*
+**/tcp_*
+**/*log*
+
+# box dir not to include
+**/debian_4
+**/debian_5
+**/solaris_10_*
+
+# midpoint tmp files
+**/*alert*
+
+**/.vagrant/**
+

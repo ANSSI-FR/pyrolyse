@@ -1,0 +1,157 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+# If you do "vagrant up --provider=libvirt" after using virtualbox, you may 
+# need to do "sudo ip addr flush vboxnetX" to remove the IP address linked 
+# to a vboxnetX interface.
+# If you do "vagrant up --provider=virtualbox" after libvirt, you may need 
+# to do "sudo ip addr flush virbrX" to remove the IP address linked to a
+# virbrX interface.
+
+base_memory = ENV["VAGRANT_PYROLYSE_BASE_MEMORY"] || 1024
+base_cpus = ENV["VAGRANT_PYROLYSE_BASE_CPU"] || 2
+
+require 'json'
+conf_path = "conf.json"
+file = open(conf_path)
+json_s = file.read
+network_config = JSON.parse(json_s)
+
+base_mac_addr = network_config["base"]["mac_addr"]
+base_ipv4_addr = network_config["base"]["ipv4_addr"]
+base_ipv6_addr = network_config["base"]["ipv6_addr"]
+base_network_interface = network_config["base"]["network_interface"]
+
+target_mac_addr = network_config["target"]["mac_addr"]
+target_ipv4_addr = network_config["target"]["ipv4_addr"]
+target_ipv6_addr = network_config["target"]["ipv6_addr"]
+target_family = network_config["target"]["family"]
+target_name = network_config["target"]["name"]
+
+base_mac_addr_with_colons = base_mac_addr.scan(/.{1,2}/).join(":")
+target_mac_addr_with_colons = target_mac_addr.scan(/.{1,2}/).join(":")
+
+Vagrant.configure("2") do |config|
+  config.vm.define "base" do |base|
+    base.vm.box = "debian/testing64"
+    base.vm.box_version = "20250426.1"
+    
+    base.vm.provider "virtualbox" do |v|
+      v.memory = base_memory
+      v.cpus = base_cpus
+    end
+    
+    base.vm.network "private_network", name: "vboxnet2", ip: base_ipv4_addr, :mac => base_mac_addr
+    base.vm.provision "shell", run: "always", args: base_ipv6_addr, inline: "ip -6 addr add $1/64 dev eth1"
+    base.vm.hostname = "base"
+    
+    base.vm.provider :virtualbox do |vb, override|
+      # We deactivate guest because vboxsf is not working if we do not (Debian 10 Buster/virtualbox-6.1 from Oracle repository).
+      override.vbguest.auto_update = false
+    end
+    
+    base.vm.synced_folder ".", "/vagrant", disabled: true
+    # This setups vboxsf when using VirtualBox.
+    base.vm.synced_folder "../../..", "/home/vagrant/pyrolyse"
+    # This replace the default rsync method by NFS when using libvirt.
+    base.vm.provider :libvirt do |lv, override|
+      override.vm.synced_folder "../../..", "/home/vagrant/pyrolyse", type: "nfs"
+    end
+    
+    base.vm.provision "shell", inline: <<-SHELL
+      apt update
+      
+      # IP experiments
+      apt install -y --no-install-recommends tcpdump tcpreplay ethtool python3-scapy
+      ethtool -K eth1 tso off gso off rxvlan off txvlan off ufo off gro off lro off tx off sg off rx off
+      
+      # TCP experiments
+      apt install -y --no-install-recommends unzip net-tools parallel jq
+
+      echo "export PYROLYSE_PATH=/home/vagrant/pyrolyse" >> /home/vagrant/.bashrc
+    SHELL
+    
+    base.vm.provision "shell", run: "always", args: base_mac_addr_with_colons, inline: <<-SHELL
+      echo "export BASE_MAC_ADDR=$1" >> /home/vagrant/.bashrc
+    SHELL
+    base.vm.provision "shell", run: "always", args: [base_ipv4_addr, base_ipv6_addr, base_network_interface], inline: <<-SHELL
+      echo "export BASE_IPV4_ADDR=$1" >> /home/vagrant/.bashrc
+      echo "export BASE_IPV6_ADDR=$2" >> /home/vagrant/.bashrc
+      echo "export BASE_NETWORK_INTERFACE=$3" >> /home/vagrant/.bashrc
+    SHELL
+    
+    base.vm.provision "shell", run: "always", args: target_mac_addr_with_colons, inline: <<-SHELL
+      echo "export TARGET_MAC_ADDR=$1" >> /home/vagrant/.bashrc
+    SHELL
+    base.vm.provision "shell", run: "always", args: [target_ipv4_addr, target_ipv6_addr], inline: <<-SHELL
+      echo "export TARGET_IPV4_ADDR=$1" >> /home/vagrant/.bashrc
+      echo "export TARGET_IPV6_ADDR=$2" >> /home/vagrant/.bashrc
+    SHELL
+    base.vm.provision "shell", run: "always", args: [target_family, target_name], inline: <<-SHELL
+      echo "export TARGET_FAMILY=$1" >> /home/vagrant/.bashrc
+      echo "export TARGET_NAME=$2" >> /home/vagrant/.bashrc
+    SHELL
+
+    # We populate the ARP table so that the Rust TCP testing tool can get the MAC/IP info.
+    base.vm.provision "shell", run: "always", args: [target_ipv4_addr, target_mac_addr], inline: <<-SHELL
+      arp -s $1 $2
+    SHELL
+
+    # Next line is needed to block answer to UDP echo data when testing IP fragmentation.
+    base.vm.provision "shell", run: "always", inline: <<-SHELL
+      iptables -I OUTPUT -p icmp --icmp-type port-unreachable -j DROP
+    SHELL
+  end
+  
+  config.vm.define "target" do |target|
+    #target.vm.box = "debian/buster64"
+    target.vm.box = "generic/debian10"
+    target.vm.box_version = "4.3.12"
+    
+    
+    target.vm.network "private_network", name: "vboxnet2", ip: target_ipv4_addr, :mac => target_mac_addr
+    target.vm.provision "shell", run: "always", args: target_ipv6_addr, inline: <<-SHELL
+      sysctl -w net.ipv6.conf.all.disable_ipv6=0
+      ip -6 addr add $1/64 dev eth1
+    SHELL
+    
+    target.vm.hostname = "target"
+    
+    target.vm.synced_folder ".", "/vagrant", disabled: true
+    
+    target.vm.provider :virtualbox do |vb, override|
+      # We deactivate guest because we get this error: "E: Unable to locate package linux-headers-3.16.0-9-amd64".
+      override.vbguest.auto_update = false
+    end
+    
+    target.vm.provision "shell", inline: <<-SHELL
+      ## Debian 10/buster repositories are now on archive.debian.org.
+      #sed -i "s/deb.debian.org/archive.debian.org/g" /etc/apt/sources.list
+      #sed -i "s/security.debian.org/archive.debian.org/g" /etc/apt/sources.list
+      apt update
+      
+      # IP experiments - Desactivating offloading
+      apt install -y --no-install-recommends ethtool
+      
+      # TCP experiments
+      apt install -y --no-install-recommends xinetd --force-yes
+      sed -i -e "s/disable\t\t= yes/disable\t\t= no/" /etc/xinetd.d/echo
+    SHELL
+    
+    target.vm.provision "shell", run: "always", inline: <<-SHELL
+      # IP experiments - Desactivating offloading
+      ethtool -K eth1 tso off gso off rxvlan off gro off tx off sg off rx off
+      
+      # TCP experiments
+      service xinetd restart
+    SHELL
+  end
+end
+
+# Test commands (from base)
+# IPv4: ping -c 5 "${TARGET_IPV4_ADDR}"
+# IPv6: ping -c 5 "${TARGET_IPV6_ADDR}"
+# TCP: sudo hping3 -S "${TARGET_IPV4_ADDR}" -p 7
+# TCP: nc "${TARGET_IPV4_ADDR}" 7 (type "toto" and observe "toto" sent back)
+
+

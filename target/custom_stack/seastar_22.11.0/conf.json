@@ -1,0 +1,28 @@
+
+{
+  "base": {
+    "mac_addr": "000000000030",
+    "ipv4_addr": "192.168.56.30",
+    "ipv6_addr": "fd00:0:0:56::30",
+    "network_interface": "eth1"
+  },
+  "target": {
+    "mac_addr": "000000000031",
+    "ipv4_addr": "192.168.56.31",
+    "ipv6_addr": "fd00:0:0:56::31",
+    "family": "custom_stack",
+    "name": "seastar_22.11.0"
+  },
+  "bonus_network": {
+    "ipv4_addr": "192.168.57.0",
+    "ipv6_addr": "fd00:0:0:57::"
+  },
+  "tap0": {
+    "ipv4_addr": "192.168.57.32",
+    "ipv6_addr": "fd00:0:0:57::32"
+  },
+  "app": {
+    "ipv4_addr": "192.168.57.33",
+    "ipv6_addr": "fd00:0:0:57::33"
+  }
+}

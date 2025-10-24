@@ -1,0 +1,15 @@
+{
+  "base": {
+    "mac_addr": "000000000044",
+    "ipv4_addr": "192.168.56.44",
+    "ipv6_addr": "fd00:0:0:56::44",
+    "network_interface": "eth1"
+  },
+  "target": {
+    "mac_addr": "000000000045",
+    "ipv4_addr": "192.168.56.45",
+    "ipv6_addr": "fd00:0:0:56::45",
+    "family": "os",
+    "name": "macos_10.12"
+  }
+}

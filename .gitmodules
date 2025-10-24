@@ -1,0 +1,4 @@
+
+[submodule "sparq/SparQ"]
+	path = sparq/SparQ
+	url = https://github.com/dwolter/SparQ.git

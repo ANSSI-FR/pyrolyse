@@ -1,0 +1,15 @@
+{
+  "base": {
+    "mac_addr": "000000000036",
+    "ipv4_addr": "192.168.56.36",
+    "ipv6_addr": "fd00:0:0:56::36",
+    "network_interface": "eth1"
+  },
+  "target": {
+    "mac_addr": "000000000037",
+    "ipv4_addr": "192.168.56.37",
+    "ipv6_addr": "fd00:0:0:56::37",
+    "family": "os",
+    "name": "freebsd_14.1"
+  }
+}

@@ -1,0 +1,121 @@
+*** seastar_ref/apps/echo_server/echo_server.cc 2024-10-18 08:31:43.040117384 +0000
+--- seastar_mod/apps/echo_server/echo_server.cc 2024-10-18 11:55:15.967234029 +0000
+***************
+*** 0 ****
+--- 1,81 ----
++ // adapted from demo/tcp_demo.cc 
++ // with https://github.com/scylladb/seastar/issues/1526 fix
++ 
++ #include <seastar/core/app-template.hh>
++ #include <seastar/util/log.hh>
++ #include <iostream>
++ #include <stdexcept>
++ #include <seastar/core/seastar.hh>
++ #include <seastar/core/reactor.hh>
++ #include <seastar/core/future-util.hh>
++ #include <seastar/net/api.hh>
++ #include <seastar/net/inet_address.hh>
++ #include <seastar/net/virtio.hh>
++ #include <seastar/net/native-stack.hh>
++ #include <seastar/core/aligned_buffer.hh>
++ #include <seastar/net/arp.hh>
++ #include <seastar/net/ip.hh>
++ #include <seastar/net/net.hh>
++ 
++ #include <seastar/net/arp.hh>
++ #include <seastar/core/alien.hh>
++ 
++ #include <seastar/net/tcp.hh>
++ 
++ using namespace seastar;
++ using namespace net;
++
++ 
++ struct tcp_echo {
++     ipv4& inet;
++     using tcp = net::tcp<ipv4_traits>;
++     tcp::listener _listener;
++     struct connection {
++         tcp::connection tcp_conn;
++         explicit connection(tcp::connection tc) : tcp_conn(std::move(tc)) {}
++         void run() {
++             // Read packets and echo back in the background.
++             (void)tcp_conn.wait_for_data().then([this] {
++                 auto p = tcp_conn.read();
++                 if (!p.len()) {
++                     tcp_conn.close_write();
++                     return;
++                 }
++                 //fmt::print("read {:d} bytes\n", p.len());
++                 (void)tcp_conn.send(std::move(p));
++                 run();
++             });
++         }
++     };
++     tcp_echo(ipv4& inet) : inet(inet), _listener(inet.get_tcp().listen(7)) {}
++     void run() {
++         // Run all connections in the background.
++         (void)_listener.accept().then([this] (tcp::connection conn) {
++             (new connection(std::move(conn)))->run();
++             run();
++         });
++     }
++ };
++ 
++ int main(int argc, char** argv) {
++     // init reactor
++     app_template::seastar_options ssopts;
++     std::unique_ptr<alien::instance> alien(std::make_unique<alien::instance>());
++     std::shared_ptr<smp> smp(std::make_shared<smp>(*alien));
++     smp->configure(ssopts.smp_opts, ssopts.reactor_opts);
++ 
++     native_stack_options opts;
++ 
++     auto vnet = create_virtio_net_device(opts.virtio_opts, opts.lro);
++     // init queue
++     auto qp = vnet->init_local_queue(opts, 0);
++     vnet->set_local_queue(std::move(qp));
++ 
++     interface netif(std::move(vnet));
++     ipv4 inet(&netif);
++     inet.set_host_address(ipv4_address("192.168.57.33"));
++ 
++     tcp_echo te(inet);
++     (void)engine().when_started().then([&te] { te.run(); });
++     engine().run();
++ }
+*** seastar_ref/apps/echo_server/CMakeLists.txt 2024-10-18 08:32:00.032134519 +0000
+--- seastar_mod/apps/echo_server/CMakeLists.txt 2024-10-18 11:49:39.535070632 +0000
+***************
+*** 0 ****
+--- 1,6 ----
++ 
++ seastar_add_app (echo_server
++   SOURCES echo_server.cc)
++ 
++ target_link_libraries (app_echo_server
++   PRIVATE yaml-cpp::yaml-cpp)
+*** seastar_ref/apps/CMakeLists.txt     2024-10-18 08:27:50.652528064 +0000
+--- seastar_mod/apps/CMakeLists.txt     2024-10-18 08:25:45.121916622 +0000
+***************
+*** 48,56 ****
+    add_dependencies (apps ${target})
+  endmacro ()
+  
+! add_subdirectory (httpd)
+! add_subdirectory (io_tester)
+! add_subdirectory (rpc_tester)
+! add_subdirectory (iotune)
+! add_subdirectory (memcached)
+! add_subdirectory (seawreck)
+--- 48,57 ----
+    add_dependencies (apps ${target})
+  endmacro ()
+  
+! #add_subdirectory (httpd)
+! #add_subdirectory (io_tester)
+! #add_subdirectory (rpc_tester)
+! #add_subdirectory (iotune)
+! #add_subdirectory (memcached)
+! #add_subdirectory (seawreck)
+! add_subdirectory (echo_server)

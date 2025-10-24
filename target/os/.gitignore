@@ -1,0 +1,28 @@
+
+# Ignore
+**/*.pcap
+**/*.json
+**/*.csv
+**/*.pdf
+**/*.png
+**/OS_comparison_per_scenarii.txt
+**/inconsistencies_number.txt
+**/meta_info.txt
+**/ipv4_*
+**/ipv6_*
+**/tc_*
+**/output*
+**/tcp_*
+**/log*
+**/*.log
+**/debian_4
+**/debian_5
+**/solaris_10_*
+
+**/.vagrant/**
+
+
+# Allow
+!**/conf.json
+
+

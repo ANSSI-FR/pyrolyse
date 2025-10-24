@@ -1,0 +1,33 @@
+diff -NcrB picotcp/Makefile picotcp_fixed/Makefile
+*** picotcp/Makefile	2023-10-20 16:24:20.056872086 +0200
+--- picotcp_fixed/Makefile	2023-10-20 16:25:45.596869330 +0200
+***************
+*** 33,39 ****
+  ETH?=1
+  IPV4?=1
+  IPV4FRAG?=1
+! IPV6FRAG?=0
+  NAT?=1
+  ICMP4?=1
+  MCAST?=1
+--- 33,39 ----
+  ETH?=1
+  IPV4?=1
+  IPV4FRAG?=1
+! IPV6FRAG?=1
+  NAT?=1
+  ICMP4?=1
+  MCAST?=1
+diff -NcrB picotcp/test/examples/tcpecho.c picotcp_fixed/test/examples/tcpecho.c
+*** picotcp/test/examples/tcpecho.c	2023-10-20 16:24:20.124872084 +0200
+--- picotcp_fixed/test/examples/tcpecho.c	2023-10-20 16:25:34.292869694 +0200
+***************
+*** 129,134 ****
+--- 129,135 ----
+          nxt = cpy_arg(&lport, nxt);
+          if (lport && atoi(lport)) {
+              listen_port = short_be(atoi(lport));
++             free(lport);
+          } else {
+              goto out;
+          }

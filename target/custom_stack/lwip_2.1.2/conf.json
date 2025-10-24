@@ -1,0 +1,27 @@
+{
+  "base": {
+    "mac_addr": "000000000020",
+    "ipv4_addr": "192.168.56.20",
+    "ipv6_addr": "fd00:0:0:56::20",
+    "network_interface": "eth1"
+  },
+  "target": {
+    "mac_addr": "000000000021",
+    "ipv4_addr": "192.168.56.21",
+    "ipv6_addr": "fd00:0:0:56::21",
+    "family": "custom_stack",
+    "name": "lwip_2.1.2"
+  },
+  "bonus_network": {
+    "ipv4_addr": "192.168.57.0",
+    "ipv6_addr": "fd00:0:0:57::"
+  },
+  "tap0": {
+    "ipv4_addr": "192.168.57.22",
+    "ipv6_addr": "fd00:0:0:57::22"
+  },
+  "app": {
+    "ipv4_addr": "192.168.57.23",
+    "ipv6_addr": "fd00:0:0:57::23"
+  }
+}

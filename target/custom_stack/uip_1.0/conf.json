@@ -1,0 +1,38 @@
+{
+  "base": {
+    "mac_addr": "000000000024",
+    "ipv4_addr": "192.168.56.24",
+    "ipv6_addr": "fd00:0:0:56::24",
+    "network_interface": "eth1"
+  },
+  "target": {
+    "family": "custom_stack",
+    "name": "uip_1.0"
+  },
+  "bonus_network": {
+    "ipv4_addr": "192.168.57.0",
+    "ipv6_addr": "fd00:0:0:57::"
+  },
+  "target_v4": {
+    "mac_addr": "000000000025",
+    "ipv4_addr": "192.168.56.25",
+    "ipv6_addr": "fd00:0:0:56::25"
+  },
+  "tap0_v4": {
+    "ipv4_addr": "192.168.57.26"
+  },
+  "stack_v4": {
+    "ipv4_addr": "192.168.57.27"
+  },
+  "target_v6": {
+    "mac_addr": "000000000028",
+    "ipv4_addr": "192.168.56.28",
+    "ipv6_addr": "fd00:0:0:56::28"
+  },
+  "tap0_v6": {
+    "ipv6_addr": "fd00:0:0:57::29"
+  },
+  "stack_v6": {
+    "ipv6_addr": "fd00:0:0:57::30"
+  }
+}

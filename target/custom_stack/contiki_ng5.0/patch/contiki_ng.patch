@@ -1,0 +1,44 @@
+diff -NcrB contiki-ng/examples/hello-world/hello-world.c contiki-ng_fixed/examples/hello-world/hello-world.c
+*** contiki-ng/examples/hello-world/hello-world.c	2025-05-23 09:39:07.665101756 +0000
+--- contiki-ng_fixed/examples/hello-world/hello-world.c	2025-05-23 09:29:19.747916811 +0000
+***************
+*** 46,64 ****
+  /*---------------------------------------------------------------------------*/
+  PROCESS_THREAD(hello_world_process, ev, data)
+  {
+!   static struct etimer timer;
+  
+    PROCESS_BEGIN();
+  
+    /* Setup a periodic timer that expires after 10 seconds. */
+!   etimer_set(&timer, CLOCK_SECOND * 10);
+  
+    while(1) {
+!     printf("Hello, world\n");
+  
+      /* Wait for the periodic timer to expire and then restart the timer. */
+!     PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&timer));
+!     etimer_reset(&timer);
+    }
+  
+    PROCESS_END();
+--- 46,64 ----
+  /*---------------------------------------------------------------------------*/
+  PROCESS_THREAD(hello_world_process, ev, data)
+  {
+!   //static struct etimer timer;
+  
+    PROCESS_BEGIN();
+  
+    /* Setup a periodic timer that expires after 10 seconds. */
+!   //etimer_set(&timer, CLOCK_SECOND * 10);
+  
+    while(1) {
+!     //printf("Hello, world\n");
+  
+      /* Wait for the periodic timer to expire and then restart the timer. */
+!     //PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&timer));
+!     //etimer_reset(&timer);
+    }
+  
+    PROCESS_END();
