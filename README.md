@@ -40,11 +40,10 @@ As default, vboxnet2 is used; so you need to run twice the following command, if
 
 At the root of the pyrolyse project:
 
-    $ mkdir -p "${PYROLYSE_PATH}/sparq_dir"
-    $ cd "${PYROLYSE_PATH}/sparq_dir"
+    $ mkdir -p "${PYROLYSE_PATH}/sparq"
+    $ cd "${PYROLYSE_PATH}/sparq"
     $ git clone https://github.com/dwolter/SparQ.git
-    $ mv "${PYROLYSE_PATH}/sparq_dir/SparQ" "${PYROLYSE_PATH}/sparq_dir/SparQ_${HOSTNAME}"
-    $ cd "${PYROLYSE_PATH}/sparq_dir/SparQ_${HOSTNAME}"
+    $ cd "${PYROLYSE_PATH}/sparq_dir/SparQ"
     $ git checkout f731136f76fba0225abdd457616fbfdcae83c00e
     $ autoreconf -fi
     $ ./configure
