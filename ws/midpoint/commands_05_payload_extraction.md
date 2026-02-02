@@ -19,7 +19,7 @@
 "${PYROLYSE_PATH}/test_data/merged/byte_time_sequence.json" \
 "${PYROLYSE_PATH}/target/midpoint/${target_reassembly_policy}/ipv4/output/${reassembly_options}" \
 ipv4 \
-"icfl8b" \
+"icvl8i4" \
 "" \
 20
 ```
@@ -33,7 +33,7 @@ ipv4 \
 "${PYROLYSE_PATH}/test_data/merged/byte_time_sequence.json" \
 "${PYROLYSE_PATH}/target/midpoint/${target_reassembly_policy}/ipv6/output/${reassembly_options}" \
 ipv6 \
-"icfl8b" \
+"icvl8i6" \
 "" \
 20
 ```
@@ -48,7 +48,7 @@ sha256sum ${target_reassembly_policy}/*payload*.json | sort -k2
 "${PYROLYSE_PATH}/test_data/merged/byte_time_sequence.json" \
 "${PYROLYSE_PATH}/target/midpoint/${target_reassembly_policy}/tcp/output/${reassembly_options}" \
 tcp \
-"icfl8b" \
+"icvl8i4" \
 "" \
 20
 ```
@@ -65,7 +65,7 @@ tcp \
 "${PYROLYSE_PATH}/test_data/merged/byte_time_sequence.json" \
 "${PYROLYSE_PATH}/target/midpoint/${target_reassembly_policy}/ipv4/output/${reassembly_options}" \
 ipv4 \
-"icfl8b" \
+"icvl8i4" \
 ""
 ```
 
@@ -77,7 +77,7 @@ ipv4 \
 "${PYROLYSE_PATH}/test_data/merged/byte_time_sequence.json" \
 "${PYROLYSE_PATH}/target/midpoint/${target_reassembly_policy}/ipv6/output/${reassembly_options}" \
 ipv6 \
-"icfl8b" \
+"icvl8i4" \
 ""
 ```
 
@@ -93,7 +93,7 @@ sha256sum ${target_reassembly_policy}/*payload*.json | sort -k2
 "${PYROLYSE_PATH}/test_data/merged/byte_time_sequence.json" \
 "${PYROLYSE_PATH}/target/midpoint/${target_reassembly_policy}/tcp/output/${reassembly_options}" \
 tcp \
-"icfl8b" \
+"icvl8i4" \
 ""
 ```
 
@@ -134,15 +134,6 @@ ipv4 \
 "${PYROLYSE_PATH}/test_data/merged/byte_time_sequence.json" \
 "${PYROLYSE_PATH}/target/midpoint/${target_reassembly_policy}/ipv6/output/${reassembly_options}" \
 ipv6 \
-20
-```
-
-```bash
-"${PYROLYSE_PATH}/tools/script/midpoint/extract_midpoint_payload_scenarii.sh" \
-"${PYROLYSE_PATH}/tools/script/midpoint/extract_midpoint_payload_from_suricata_log_directory_to_json.py" \
-"${PYROLYSE_PATH}/test_data/merged/byte_time_sequence.json" \
-"${PYROLYSE_PATH}/target/midpoint/${target_reassembly_policy}/ipv6/output/${reassembly_options}" \
-ipv6 \
 "icvl8i6" \
 "payload" \
 20
@@ -154,20 +145,11 @@ sha256sum "${PYROLYSE_PATH}/target/midpoint/${target_reassembly_policy}/*payload
 
 ```bash
 "${PYROLYSE_PATH}/tools/script/midpoint/extract_midpoint_payload_scenarii.sh" \
-"${PYROLYSE_PATH}/tools/script/midpoint/old/extract_midpoint_payload_from_suricata_log_directory_to_json.py" \
-"${PYROLYSE_PATH}/test_data/merged/byte_time_sequence.json" \
-"${PYROLYSE_PATH}/target/midpoint/${target_reassembly_policy}/tcp/output/${reassembly_options}" \
-tcp \
-20
-```
-
-```bash
-"${PYROLYSE_PATH}/tools/script/midpoint/extract_midpoint_payload_scenarii.sh" \
 "${PYROLYSE_PATH}/tools/script/midpoint/extract_midpoint_payload_from_suricata_log_directory_to_json.py" \
 "${PYROLYSE_PATH}/test_data/merged/byte_time_sequence.json" \
 "${PYROLYSE_PATH}/target/midpoint/${target_reassembly_policy}/tcp/output/${reassembly_options}" \
 tcp \
-"icfl8b" \
+"icvl8i4" \
 "payload" \
 20
 ```
@@ -183,7 +165,7 @@ tcp \
 "${PYROLYSE_PATH}/test_data/merged/byte_time_sequence.json" \
 "${PYROLYSE_PATH}/target/midpoint/${target_reassembly_policy}/ipv4/output/${reassembly_options}" \
 ipv4 \
-"icfl8b" \
+"icvl8i4" \
 "payload"
 ```
 
@@ -195,7 +177,7 @@ ipv4 \
 "${PYROLYSE_PATH}/test_data/merged/byte_time_sequence.json" \
 "${PYROLYSE_PATH}/target/midpoint/${target_reassembly_policy}/ipv6/output/${reassembly_options}" \
 ipv6 \
-"icfl8b" \
+"icvl8i6" \
 "payload"
 ```
 
@@ -206,19 +188,11 @@ sha256sum "${PYROLYSE_PATH}/target/midpoint/${target_reassembly_policy}/*payload
 
 ```bash
 "${PYROLYSE_PATH}/tools/script/midpoint/extract_midpoint_payload_scenarii_latest.sh" \
-"${PYROLYSE_PATH}/tools/script/midpoint/old/extract_midpoint_payload_from_suricata_log_directory_to_json.py" \
-"${PYROLYSE_PATH}/test_data/merged/byte_time_sequence.json" \
-"${PYROLYSE_PATH}/target/midpoint/${target_reassembly_policy}/tcp/output/${reassembly_options}" \
-tcp
-```
-
-```bash
-"${PYROLYSE_PATH}/tools/script/midpoint/extract_midpoint_payload_scenarii_latest.sh" \
 "${PYROLYSE_PATH}/tools/script/midpoint/extract_midpoint_payload_from_suricata_log_directory_to_json.py" \
 "${PYROLYSE_PATH}/test_data/merged/byte_time_sequence.json" \
 "${PYROLYSE_PATH}/target/midpoint/${target_reassembly_policy}/tcp/output/${reassembly_options}" \
 tcp \
-"icfl8b" \
+"icvl8i4" \
 "payload" \
 20
 ```

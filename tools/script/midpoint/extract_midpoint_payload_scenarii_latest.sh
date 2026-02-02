@@ -62,78 +62,70 @@ function extract_payload() {
 export -f extract_payload
 
 if [[ "${protocol}" == "tcp" ]]; then
-    #extract_payload pep-ap 0 0
-    #extract_payload pep-ao 0 0
-    #extract_payload peosp-ap 1 0
-    #extract_payload peosp-ao 1 0
-    #extract_payload peoef-ap 0 1
-    #extract_payload peoef-ao 0 1
-    #extract_payload peoep-ap 0 1
-    #extract_payload peoep-ao 0 1
-    #extract_payload peospef-ap 1 1
-    #extract_payload peospef-ao 1 1
-    #extract_payload peospep-ap 1 1
-    #extract_payload peospep-ao 1 1
-    #extract_payload peoepsp-ap 1 1
-    #extract_payload peoepsp-ao 1 1
+    extract_payload pep-ap 0 0
+    extract_payload pep-ao 0 0
+    extract_payload peosp-ap 1 0
+    extract_payload peosp-ao 1 0
+    extract_payload peoef-ap 0 1
+    extract_payload peoef-ao 0 1
+    extract_payload peoep-ap 0 1
+    extract_payload peoep-ao 0 1
+    extract_payload peospef-ap 1 1
+    extract_payload peospef-ao 1 1
+    extract_payload peospep-ap 1 1
+    extract_payload peospep-ao 1 1
+    extract_payload peoepsp-ap 1 1
+    extract_payload peoepsp-ao 1 1
 
     extract_payload peosf 1 0
-    #extract_payload peosfef 1 1
-    #extract_payload peoefsf 1 1
-    #extract_payload peoepsf 1 1
+    extract_payload peosfef 1 1
+    extract_payload peoefsf 1 1
+    extract_payload peoepsf 1 1
 else
     
-    #extract_payload pep-af 0 0
-    #extract_payload pep-of 0 0
-    #extract_payload pep-mf 0 0
+    extract_payload pep-of 0 0
+    extract_payload pep-mf 0 0
     extract_payload pep-nf 0 0
-    #extract_payload pep-onf 0 0
-    #extract_payload pep-omf 0 0
-    #extract_payload pep-mnf 0 0
-    #extract_payload pep-as 0 0
-    #extract_payload pep-os 0 0
-    #extract_payload pep-ms 0 0
-    #extract_payload pep-ns 0 0
-    #extract_payload pep-ons 0 0
-    #extract_payload pep-oms 0 0
-    #extract_payload pep-mns 0 0
-    #extract_payload peosp-af 0 0
-    #extract_payload peosp-of 0 0
-    #extract_payload peosp-mf 0 0
-    #extract_payload peosp-nf 0 0
-    #extract_payload peosp-onf 0 0
-    #extract_payload peosp-omf 0 0
-    #extract_payload peosp-mnf 0 0
-    #extract_payload peosp-as 0 0
-    #extract_payload peosp-os 0 0
-    #extract_payload peosp-ms 0 0
-    #extract_payload peosp-ns 0 0
-    #extract_payload peosp-ons 0 0
-    #extract_payload peosp-oms 0 0
-    #extract_payload peosp-mns 0 0
-    #extract_payload peosf-af 0 0
-    #extract_payload peosf-of 0 0
-    #extract_payload peosf-mf 0 0
-    #extract_payload peosf-nf 0 0
-    #extract_payload peosf-onf 0 0
-    #extract_payload peosf-omf 0 0
-    #extract_payload peosf-mnf 0 0
-    #extract_payload peosf-as 0 0
-    #extract_payload peosf-os 0 0
-    #extract_payload peosf-ms 0 0
-    #extract_payload peosf-ns 0 0
-    #extract_payload peosf-ons 0 0
-    #extract_payload peosf-oms 0 0
-    #extract_payload peosf-mns 0 0
+    extract_payload pep-os 0 0
+    extract_payload pep-ms 0 0
+    extract_payload pep-ns 0 0
+    extract_payload peosp-af 0 0
+    extract_payload peosp-of 0 0
+    extract_payload peosp-mf 0 0
+    extract_payload peosp-nf 0 0
+    extract_payload peosp-onf 0 0
+    extract_payload peosp-omf 0 0
+    extract_payload peosp-mnf 0 0
+    extract_payload peosp-as 0 0
+    extract_payload peosp-os 0 0
+    extract_payload peosp-ms 0 0
+    extract_payload peosp-ns 0 0
+    extract_payload peosp-ons 0 0
+    extract_payload peosp-oms 0 0
+    extract_payload peosp-mns 0 0
+    extract_payload peosf-af 0 0
+    extract_payload peosf-of 0 0
+    extract_payload peosf-mf 0 0
+    extract_payload peosf-nf 0 0
+    extract_payload peosf-onf 0 0
+    extract_payload peosf-omf 0 0
+    extract_payload peosf-mnf 0 0
+    extract_payload peosf-as 0 0
+    extract_payload peosf-os 0 0
+    extract_payload peosf-ms 0 0
+    extract_payload peosf-ns 0 0
+    extract_payload peosf-ons 0 0
+    extract_payload peosf-oms 0 0
+    extract_payload peosf-mns 0 0
     
-    #extract_payload peoef 0 8
-    #extract_payload peoep 0 8
-    #extract_payload peosfef 0 8
-    #extract_payload peoefsf 0 8
-    #extract_payload peospef 0 8
-    #extract_payload peoepsf 0 8
-    #extract_payload peospep 0 8
-    #extract_payload peoepsp 0 8
+    extract_payload peoef 0 8
+    extract_payload peoep 0 8
+    extract_payload peosfef 0 8
+    extract_payload peoefsf 0 8
+    extract_payload peospef 0 8
+    extract_payload peoepsf 0 8
+    extract_payload peospep 0 8
+    extract_payload peoepsp 0 8
 fi
 
 
