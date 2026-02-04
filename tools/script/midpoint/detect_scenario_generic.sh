@@ -32,6 +32,8 @@ scenario_s=$(echo "${input_directory}" | cut -d'_' -f3)
 
 truncated_protocol_s=$(echo "${protocol_s}" | cut -d'v' -f1)
 
+printf -v date '%(%Y%m%d_%H%M%S)T' -1
+
 output_log_directory_latest="${target_directory_path}/output/${reassembly_options}/${protocol_s}_${scenario_s}_latest"
 output_log_directory_current="${target_directory_path}/output/${reassembly_options}/${protocol_s}_${scenario_s}_${date}"
 mkdir -p "${output_log_directory_current}"
@@ -39,8 +41,6 @@ mkdir -p "${output_log_directory_latest}"
 
 ids_log_tmp_directory_path="${target_directory_path}/output/${reassembly_options}/ids_tmp_${date}"
 mkdir -p "${ids_log_tmp_directory_path}"
-
-printf -v date '%(%Y%m%d_%H%M%S)T' -1
 
 export target_directory_path
 export input_directory

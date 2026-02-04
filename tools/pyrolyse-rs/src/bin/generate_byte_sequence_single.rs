@@ -45,10 +45,6 @@ fn process(
 
     // Read the JSON contents of the file as an instance of `ConsistentRelationTripletPair`.
 
-    let test_path = Path::new("toto.json");
-    let json_string: String = serde_json::to_string_pretty(&AllenIntervalAlgebraRelation::S).unwrap();
-    fs::write(test_path, json_string).expect("Unable to write file");
-
     match relation_type {
         RelationType::Pair => {
             let allen_interval_algebra_relation: AllenIntervalAlgebraRelation =
