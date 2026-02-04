@@ -65,20 +65,12 @@ if [[ "${protocol}" == "tcp" ]]; then
     detect peoefsf
     detect peoepsf
 else
-    #detect pep-af
     detect pep-of
     detect pep-mf
     detect pep-nf
-    #detect pep-onf
-    #detect pep-omf
-    #detect pep-mnf
-    #detect pep-as
     detect pep-os
     detect pep-ms
     detect pep-ns
-    #detect pep-ons
-    #detect pep-oms
-    #detect pep-mns
     
     detect peosp-af
     detect peosp-of

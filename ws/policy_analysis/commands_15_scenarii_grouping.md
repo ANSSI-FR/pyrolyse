@@ -346,59 +346,50 @@ python3 "${PYROLYSE_PATH}/tools/script/policy_analysis/build_stack_scenarii_reas
 
 #### use only scenarii with full test cases
 
+##### any scenario
+
 ```bash
 python3 "${PYROLYSE_PATH}/tools/script/policy_analysis/build_stack_scenarii_boxplot.py" \
--i "${PYROLYSE_PATH}/ipv4_full_tc_scenario_groups.csv" \
--o "${PYROLYSE_PATH}/ipv4_full_tc_scenario_groups_boxplot.pdf" \
---ymax 23 \
---ytick-step 5
+-t "${PYROLYSE_PATH}" \
+-p "ipv4" \
+-jpf "_payload.json" \
+-s no \
+-o "${PYROLYSE_PATH}/ipv4_scenario_groups_w_full_tc_any_boxplot.pdf"
 ```
 
-#### use only scenarii with MF unsetting sub-strategies
-
-#### Starting 
+##### only protocol dependent
 
 ```bash
-"${PYROLYSE_PATH}/tools/script/policy_analysis/build_stack_scenarii_boxplot_scenarii.sh" \
-"${PYROLYSE_PATH}/ipv4_partial_tc_starting_scenario_groups.csv" \
-"ipv4_partial_tc_starting_scenario_groups_boxplot" 
-```
-
-#### Finishing 
-
-```bash
-"${PYROLYSE_PATH}/tools/script/policy_analysis/build_stack_scenarii_boxplot_scenarii.sh" \
-"${PYROLYSE_PATH}/ipv4_partial_tc_finishing_scenario_groups.csv" \
-"ipv4_partial_tc_finishing_scenario_groups_boxplot" 
+python3 "${PYROLYSE_PATH}/tools/script/policy_analysis/build_stack_scenarii_boxplot.py" \
+-t "${PAHT_TOPYROLYSE_PATH_USE}" \
+-p "ipv4" \
+-jpf "_payload.json" \
+-s yes \
+-o "${PYROLYSE_PATH}/ipv4_scenario_groups_w_full_tc_dependent_boxplot.pdf"
 ```
 
 ### ipv6
 
 #### use only scenarii with full test cases
 
+##### any scenario
+
 ```bash
 python3 "${PYROLYSE_PATH}/tools/script/policy_analysis/build_stack_scenarii_boxplot.py" \
--i "${PYROLYSE_PATH}/ipv6_full_tc_scenario_groups.csv" \
--o "${PYROLYSE_PATH}/ipv6_full_tc_scenario_groups_boxplot.pdf" \
---ymax 23 \
---ytick-step 5
+-t "${PYROLYSE_PATH}" \
+-p "ipv6" \
+-jpf "_payload.json" \
+-s no \
+-o "${PYROLYSE_PATH}/ipv6_scenario_groups_w_full_tc_any_boxplot.pdf"
 ```
 
-#### use only scenarii with MF unsetting sub-strategies
-
-#### Starting 
+##### only protocol dependent
 
 ```bash
-"${PYROLYSE_PATH}/tools/script/policy_analysis/build_stack_scenarii_boxplot_scenarii.sh" \
-"${PYROLYSE_PATH}/ipv6_partial_tc_starting_scenario_groups.csv" \
-"ipv6_partial_tc_starting_scenario_groups_boxplot" 
+python3 "${PYROLYSE_PATH}/tools/script/policy_analysis/build_stack_scenarii_boxplot.py" \
+-t "${PAHT_TOPYROLYSE_PATH_USE}" \
+-p "ipv6" \
+-jpf "_payload.json" \
+-s yes \
+-o "${PYROLYSE_PATH}/ipv6_scenario_groups_w_full_tc_dependent_boxplot.pdf"
 ```
-
-#### Finishing 
-
-```bash
-"${PYROLYSE_PATH}/tools/script/policy_analysis/build_stack_scenarii_boxplot_scenarii.sh" \
-"${PYROLYSE_PATH}/ipv6_partial_tc_finishing_scenario_groups.csv" \
-"ipv6_partial_tc_finishing_scenario_groups_boxplot" 
-```
-
