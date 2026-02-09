@@ -13,6 +13,7 @@ Content conditions are defined by regular expressions. We differentiate two kind
 
 We use a signature to match of the first chunk piece/pattern and the full payload is present in signatures.log after.
 
+/!\ do not forget to set Docker up
 
 #### IPv4
 
@@ -402,6 +403,9 @@ icvl8i4 \
 ```
 
 ## Snort
+
+Currently, there is no Docker container for Snort. We thus need to compile Snort locally. 
+Some installation instructions are located at `${PYROLYSE_PATH}/target/midpoint/ids_code/snort_base/commands.md`.
 
 ### IPv4
 

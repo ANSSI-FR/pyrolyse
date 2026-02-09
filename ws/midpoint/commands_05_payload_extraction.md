@@ -19,7 +19,7 @@
 "${PYROLYSE_PATH}/test_data/merged/byte_time_sequence.json" \
 "${PYROLYSE_PATH}/target/midpoint/${target_reassembly_policy}/ipv4/output/${reassembly_options}" \
 ipv4 \
-"icfl8b" \
+"icvl8i4" \
 "" \
 20
 ```
@@ -33,7 +33,7 @@ ipv4 \
 "${PYROLYSE_PATH}/test_data/merged/byte_time_sequence.json" \
 "${PYROLYSE_PATH}/target/midpoint/${target_reassembly_policy}/ipv6/output/${reassembly_options}" \
 ipv6 \
-"icfl8b" \
+"icvl8i6" \
 "" \
 20
 ```
@@ -48,7 +48,7 @@ sha256sum ${target_reassembly_policy}/*payload*.json | sort -k2
 "${PYROLYSE_PATH}/test_data/merged/byte_time_sequence.json" \
 "${PYROLYSE_PATH}/target/midpoint/${target_reassembly_policy}/tcp/output/${reassembly_options}" \
 tcp \
-"icfl8b" \
+"icvl8i4" \
 "" \
 20
 ```
@@ -65,7 +65,7 @@ tcp \
 "${PYROLYSE_PATH}/test_data/merged/byte_time_sequence.json" \
 "${PYROLYSE_PATH}/target/midpoint/${target_reassembly_policy}/ipv4/output/${reassembly_options}" \
 ipv4 \
-"icfl8b" \
+"icvl8i4" \
 ""
 ```
 
@@ -77,7 +77,7 @@ ipv4 \
 "${PYROLYSE_PATH}/test_data/merged/byte_time_sequence.json" \
 "${PYROLYSE_PATH}/target/midpoint/${target_reassembly_policy}/ipv6/output/${reassembly_options}" \
 ipv6 \
-"icfl8b" \
+"icvl8i4" \
 ""
 ```
 
@@ -93,7 +93,7 @@ sha256sum ${target_reassembly_policy}/*payload*.json | sort -k2
 "${PYROLYSE_PATH}/test_data/merged/byte_time_sequence.json" \
 "${PYROLYSE_PATH}/target/midpoint/${target_reassembly_policy}/tcp/output/${reassembly_options}" \
 tcp \
-"icfl8b" \
+"icvl8i4" \
 ""
 ```
 

@@ -7,7 +7,7 @@
 
 ```bash
 python3 "${PYROLYSE_PATH}/tools/script/policy_analysis/build_stack_reassembly_policy_heatmap_two_cm.py" \
--t "/run/media/laubard/59562097-9d04-45d4-afb5-c793f189cdf6/pyrolyse_data/20250815_target_RAID_CAMERA_READY" \
+-t "${PYROLYSE_PATH}" \
 -p "ipv4" \
 -jpf "_payload.json" \
 --ip-scenarii-to-use "protocol_agnostic_only" \
@@ -18,12 +18,21 @@ python3 "${PYROLYSE_PATH}/tools/script/policy_analysis/build_stack_reassembly_po
 
 #### use only protocol-dependant part-related scenarii
 
+```bash
+python3 "${PYROLYSE_PATH}/tools/script/policy_analysis/build_stack_reassembly_policy_heatmap_two_cm.py" \
+-t "${PYROLYSE_PATH}" \
+-p "ipv4" \
+-jpf "_payload.json" \
+--ip-scenarii-to-use "protocol_dependant_only" \
+-op "${PYROLYSE_PATH}/ipv4_pds_stack_reassembly_policy_heatmap.pdf" \
+-oc "${PYROLYSE_PATH}/ipv4_pds_stack_reassembly_policy.csv"
+```
 
 #### use any scenario
 
 ```bash
 python3 "${PYROLYSE_PATH}/tools/script/policy_analysis/build_stack_reassembly_policy_heatmap_two_cm.py" \
--t "/run/media/laubard/59562097-9d04-45d4-afb5-c793f189cdf6/pyrolyse_data/20250815_target_RAID_CAMERA_READY" \
+-t "${PYROLYSE_PATH}" \
 -p "ipv4" \
 -jpf "_payload.json" \
 --ip-scenarii-to-use "any" \
@@ -38,7 +47,7 @@ python3 "${PYROLYSE_PATH}/tools/script/policy_analysis/build_stack_reassembly_po
 
 ```bash
 python3 "${PYROLYSE_PATH}/tools/script/policy_analysis/build_stack_reassembly_policy_heatmap_two_cm.py" \
--t "/run/media/laubard/59562097-9d04-45d4-afb5-c793f189cdf6/pyrolyse_data/20250815_target_RAID_CAMERA_READY" \
+-t "${PYROLYSE_PATH}" \
 -p "ipv6" \
 -jpf "_payload.json" \
 --ip-scenarii-to-use "protocol_agnostic_only" \
@@ -49,7 +58,7 @@ python3 "${PYROLYSE_PATH}/tools/script/policy_analysis/build_stack_reassembly_po
 
 ```bash
 python3 "${PYROLYSE_PATH}/tools/script/policy_analysis/build_stack_reassembly_policy_heatmap_two_cm.py" \
--t "/run/media/laubard/59562097-9d04-45d4-afb5-c793f189cdf6/pyrolyse_data/20250815_target_RAID_CAMERA_READY" \
+-t "${PYROLYSE_PATH}" \
 -p "ipv6" \
 -jpf "_payload.json" \
 --ip-scenarii-to-use "any" \
@@ -61,7 +70,7 @@ python3 "${PYROLYSE_PATH}/tools/script/policy_analysis/build_stack_reassembly_po
 
 ```bash
 python3 "${PYROLYSE_PATH}/tools/script/policy_analysis/build_stack_reassembly_policy_heatmap_two_cm.py" \
--t "/run/media/laubard/59562097-9d04-45d4-afb5-c793f189cdf6/pyrolyse_data/20250815_target_RAID_CAMERA_READY" \
+-t "${PYROLYSE_PATH}" \
 -p "tcp" \
 -jpf "_payload.json" \
 -op "${PYROLYSE_PATH}/tcp_stack_reassembly_policy_heatmap.pdf" \
