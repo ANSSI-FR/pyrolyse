@@ -31,6 +31,8 @@ icvl8i4
 
 ## IPv6
 
+### Invariant checksum for a single reassembled payload lengths (novak-like)
+
 ```bash
 "${PYROLYSE_PATH}/tools/script/midpoint/extract_midpoint_minimal_policies_scenarii.sh" \
 "${PYROLYSE_PATH}/target/midpoint/${target_reassembly_policy}" \
@@ -57,5 +59,6 @@ icvl8i6
 "${PYROLYSE_PATH}/target/midpoint/${target_reassembly_policy}" \
 "$reassembly_options" \
 tcp \
-icfl8b
+icvl8i4
+
 ```
