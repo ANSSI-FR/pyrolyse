@@ -128,7 +128,7 @@ Vagrant.configure("2") do |config|
   
   config.vm.define "target" do |target|
     target.vm.box = "debian/bookworm64"
-    target.vm.box_version = "12.20250426.1"
+    target.vm.box_version = "12.20250126.1"
 
     target.vm.provider "virtualbox" do |v|
       v.memory = 4096 # to avoid rustc installation crash
@@ -150,17 +150,23 @@ Vagrant.configure("2") do |config|
       apt update
       apt install -y --no-install-recommends tcpdump ca-certificates netbase publicsuffix net-tools build-essential git curl ethtool openssl gcc make
 
-      # Seting up contiki-ng's hello-world example app as described in https://docs.contiki-ng.org/en/develop/doc/tutorials/Hello%2C-World%21.html
       git clone https://github.com/contiki-ng/contiki-ng
       cd contiki-ng
-      git checkout 25815e38567922abfebc468b2dfcbb082db91582
-      patch -p1 < /home/vagrant/patch/contiki_ng.patch
-      cd examples/hello-world
+      git checkout 25815e38567922abfebc468b2dfcbb082db91582 
+      #patch -p1 < /home/vagrant/patch/contiki_ng.patch
+      #cd examples/hello-world
+      #make TARGET=native
+
+      # Using tcp-echo-server app from nvt  
+      cd /home/vagrant
+      git clone https://github.com/nvt/contiki-ng contiki-ng-nvt -b tcp-echo-server
+
+      cp -r contiki-ng-nvt/examples/tcp-echo-server contiki-ng/examples
+      cd contiki-ng/examples/tcp-echo-server
       make TARGET=native
-      
     SHELL
     
-    target.vm.provision "shell", run: "always", args: target_ipv6_addr, inline: <<-SHELL
+    target.vm.provision "shell", run: "always", inline: <<-SHELL
       ethtool -K eth1 tso off gso off rxvlan off txvlan off ufo off gro off lro off tx off sg off rx off
       sysctl -w net.ipv6.conf.all.forwarding=1
 
@@ -170,6 +176,11 @@ Vagrant.configure("2") do |config|
       # Using default contiki-ng IPv6 address because I can't netcat our custom adsress  
       bash -c 'contiki-ng/examples/tcp-echo-server/build/native/tcp-echo-server.native &> /home/vagrant/log &'
       echo "contiki launched"
+    SHELL
+
+    target.vm.provision "shell", run: "always", args: target_ipv6_addr, inline: <<-SHELL
+      bash -c "ping -I tun0 $1 &> /home/vagrant/log_ping &"
+      echo "ping loop launched"
     SHELL
 
   end
